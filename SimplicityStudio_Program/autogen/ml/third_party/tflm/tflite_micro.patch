@@ -1,0 +1,2033 @@
+diff --git a/tensorflow/compiler/mlir/lite/core/c/builtin_op_data.h b/tensorflow/compiler/mlir/lite/core/c/builtin_op_data.h
+index 1327162f..66d5dada 100644
+--- a/tensorflow/compiler/mlir/lite/core/c/builtin_op_data.h
++++ b/tensorflow/compiler/mlir/lite/core/c/builtin_op_data.h
+@@ -30,6 +30,13 @@ limitations under the License.
+ extern "C" {
+ #endif  // __cplusplus
+ 
++#ifndef __arm__
++// This is to ensure data struct size in the simulator
++// match the embedded size
++#pragma pack(push,4)
++#define enum enum  __attribute__((packed))
++#endif
++
+ // TfLiteReshapeParams can't have dynamic data so we fix the maximum possible
+ // number of dimensions.
+ #define TFLITE_RESHAPE_PARAMS_MAX_DIMENSION_COUNT 8
+@@ -636,7 +643,7 @@ enum TfLiteReduceWindowFunction {
+ };
+ 
+ typedef struct {
+-  enum TfLiteReduceWindowFunction reduce_function;
++  TfLiteReduceWindowFunction reduce_function;
+ } TfLiteReduceWindowParams;
+ 
+ typedef struct {
+@@ -663,6 +670,12 @@ typedef struct {
+   uint32_t num_branches;
+ } TfLiteStablehloCaseParams;
+ 
++
++#ifndef __arm__
++#pragma pack(pop)
++#undef enum
++#endif
++
+ #ifdef __cplusplus
+ }  // extern "C"
+ #endif  // __cplusplus
+diff --git a/tensorflow/lite/kernels/internal/common.cc b/tensorflow/lite/kernels/internal/common.cc
+index fabb0208..002fe508 100644
+--- a/tensorflow/lite/kernels/internal/common.cc
++++ b/tensorflow/lite/kernels/internal/common.cc
+@@ -14,6 +14,7 @@ limitations under the License.
+ ==============================================================================*/
+ 
+ #include "tensorflow/lite/kernels/internal/common.h"
++#include "tflite_micro_logger.hpp"
+ 
+ namespace tflite {
+ 
+@@ -21,15 +22,15 @@ namespace tflite {
+ #if TFLITE_SINGLE_ROUNDING
+ int32_t MultiplyByQuantizedMultiplier(int32_t x, int32_t quantized_multiplier,
+                                       int shift) {
+-  TFLITE_DCHECK(quantized_multiplier >= 0);
+-  TFLITE_DCHECK(shift >= -31 && shift <= 30);
++  NPU_TOOLKIT_CHECK(quantized_multiplier >= 0);
++  NPU_TOOLKIT_CHECK(shift >= -31 && shift <= 30);
+ 
+   const int64_t total_shift = 31 - shift;
+   const int64_t round = static_cast<int64_t>(1) << (total_shift - 1);
+   int64_t result = x * static_cast<int64_t>(quantized_multiplier) + round;
+   result = result >> total_shift;
+ 
+-  TFLITE_DCHECK(result >= std::numeric_limits<int32_t>::min() &&
++  NPU_TOOLKIT_CHECK(result >= std::numeric_limits<int32_t>::min() &&
+                 result <= std::numeric_limits<int32_t>::max());
+   return static_cast<int32_t>(result);
+ }
+@@ -44,9 +45,9 @@ int32_t MultiplyByQuantizedMultiplier(int64_t x, int32_t quantized_multiplier,
+   // - quantize_scale>=0  (the usual range is (1<<30) to (1>>31)-1)
+   // - scaling is chosen so final scaled result fits in int32_t
+   // - input x is in the range -(1<<47) <= x < (1<<47)
+-  TFLITE_DCHECK(quantized_multiplier >= 0);
+-  TFLITE_DCHECK(shift >= -31 && shift < 8);
+-  TFLITE_DCHECK(x >= -(static_cast<int64_t>(1) << 47) &&
++  NPU_TOOLKIT_CHECK(quantized_multiplier >= 0);
++  NPU_TOOLKIT_CHECK(shift >= -31 && shift < 8);
++  NPU_TOOLKIT_CHECK(x >= -(static_cast<int64_t>(1) << 47) &&
+                 x < (static_cast<int64_t>(1) << 47));
+ 
+   const int32_t reduced_multiplier =
+@@ -58,7 +59,7 @@ int32_t MultiplyByQuantizedMultiplier(int64_t x, int32_t quantized_multiplier,
+   int64_t result = x * static_cast<int64_t>(reduced_multiplier) + round;
+   result = result >> total_shift;
+ 
+-  TFLITE_DCHECK(result >= std::numeric_limits<int32_t>::min() &&
++  NPU_TOOLKIT_CHECK(result >= std::numeric_limits<int32_t>::min() &&
+                 result <= std::numeric_limits<int32_t>::max());
+   return static_cast<int32_t>(result);
+ }
+diff --git a/tensorflow/lite/kernels/internal/quantization_util.cc b/tensorflow/lite/kernels/internal/quantization_util.cc
+index 62045d67..d3347a3c 100644
+--- a/tensorflow/lite/kernels/internal/quantization_util.cc
++++ b/tensorflow/lite/kernels/internal/quantization_util.cc
+@@ -21,6 +21,7 @@ limitations under the License.
+ 
+ #include "tensorflow/lite/kernels/internal/compatibility.h"
+ #include "tensorflow/lite/kernels/internal/cppmath.h"
++#include "tflite_micro_logger.hpp"
+ 
+ namespace tflite {
+ 
+@@ -106,19 +107,19 @@ void QuantizeMultiplier(double double_multiplier, int32_t* quantized_multiplier,
+ void QuantizeMultiplierGreaterThanOne(double double_multiplier,
+                                       int32_t* quantized_multiplier,
+                                       int* left_shift) {
+-  TFLITE_CHECK_GT(double_multiplier, 1.);
++  NPU_TOOLKIT_CHECK_GT(double_multiplier, 1.);
+   QuantizeMultiplier(double_multiplier, quantized_multiplier, left_shift);
+-  TFLITE_CHECK_GE(*left_shift, 0);
++  NPU_TOOLKIT_CHECK_GE(*left_shift, 0);
+ }
+ 
+ void QuantizeMultiplierSmallerThanOneExp(double double_multiplier,
+                                          int32_t* quantized_multiplier,
+                                          int* left_shift) {
+-  TFLITE_CHECK_LT(double_multiplier, 1.);
+-  TFLITE_CHECK_GT(double_multiplier, 0.);
++  NPU_TOOLKIT_CHECK_LT(double_multiplier, 1.);
++  NPU_TOOLKIT_CHECK_GT(double_multiplier, 0.);
+   int shift;
+   QuantizeMultiplier(double_multiplier, quantized_multiplier, &shift);
+-  TFLITE_CHECK_LE(shift, 0);
++  NPU_TOOLKIT_CHECK_LE(shift, 0);
+   *left_shift = shift;
+ }
+ 
+diff --git a/tensorflow/lite/kernels/internal/types.h b/tensorflow/lite/kernels/internal/types.h
+index 510ffa30..14f788e9 100644
+--- a/tensorflow/lite/kernels/internal/types.h
++++ b/tensorflow/lite/kernels/internal/types.h
+@@ -699,6 +699,7 @@ struct ComparisonParams {
+   bool is_broadcast;
+ };
+ 
++#pragma pack(push, 1)
+ struct ConvParams {
+   PaddingType padding_type;
+   PaddingValues padding_values;
+@@ -721,6 +722,7 @@ struct ConvParams {
+   float float_activation_min;
+   float float_activation_max;
+ };
++#pragma pack(pop)
+ 
+ struct Conv3DParams {
+   Padding3DValues padding_values;
+@@ -741,6 +743,7 @@ struct DepthToSpaceParams {
+   int32_t block_size;
+ };
+ 
++#pragma pack(push, 1)
+ struct DepthwiseParams {
+   PaddingType padding_type;
+   PaddingValues padding_values;
+@@ -765,6 +768,7 @@ struct DepthwiseParams {
+   const int32_t* output_multiplier_per_channel;
+   const int32_t* output_shift_per_channel;
+ };
++#pragma pack(pop)
+ 
+ struct DequantizationParams {
+   double scale;
+diff --git a/tensorflow/lite/kernels/kernel_util.cc b/tensorflow/lite/kernels/kernel_util.cc
+index 2333caeb..9deb802b 100644
+--- a/tensorflow/lite/kernels/kernel_util.cc
++++ b/tensorflow/lite/kernels/kernel_util.cc
+@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
+ limitations under the License.
+ ==============================================================================*/
+ #include "tensorflow/lite/kernels/kernel_util.h"
++#include "tflite_micro_logger.hpp"
+ 
+ #include <stdint.h>
+ #include <stdlib.h>
+@@ -248,6 +249,7 @@ TfLiteStatus PopulateConvolutionQuantizationParams(
+   }
+ 
+   // Populate multiplier and shift using affine quantization.
++  if(per_channel_multiplier != nullptr){
+   const float input_scale = input->params.scale;
+   const float output_scale = output->params.scale;
+   const float* filter_scales = affine_quantization->scale->data;
+@@ -264,7 +266,7 @@ TfLiteStatus PopulateConvolutionQuantizationParams(
+     QuantizeMultiplier(effective_output_scale, &significand, &channel_shift);
+     per_channel_multiplier[i] = significand;
+     per_channel_shift[i] = channel_shift;
+-  }
++  }}
+ 
+   // Populate scalar quantization parameters.
+   // This check on legacy quantization parameters is kept only for backward
+@@ -320,7 +322,7 @@ TfLiteStatus GetQuantizedConvolutionMultipler(TfLiteContext* context,
+     const double scale_diff = std::abs(input_product_scale - bias_scale);
+     const double output_scale = static_cast<double>(output->params.scale);
+ 
+-    TF_LITE_ENSURE(context, scale_diff / output_scale <= 0.02);
++    NPU_TOOLKIT_CHECK(scale_diff / output_scale <= 0.02);
+   }
+   return GetQuantizedConvolutionMultipler(context, input, filter, output,
+                                           multiplier);
+diff --git a/tensorflow/lite/kernels/op_macros.h b/tensorflow/lite/kernels/op_macros.h
+index 9c4e2fd0..3b4556e0 100644
+--- a/tensorflow/lite/kernels/op_macros.h
++++ b/tensorflow/lite/kernels/op_macros.h
+@@ -16,6 +16,7 @@ limitations under the License.
+ #define TENSORFLOW_LITE_KERNELS_OP_MACROS_H_
+ 
+ #include "tensorflow/lite/micro/micro_log.h"
++#include <assert.h>
+ 
+ #if !defined(TF_LITE_MCU_DEBUG_LOG)
+ #include <cstdlib>
+@@ -46,4 +47,9 @@ inline void AbortImpl() {
+     if (!(x)) TF_LITE_FATAL(#x); \
+   } while (0)
+ 
++
++
++#undef TFLITE_ABORT
++#define TFLITE_ABORT assert(!"TF-Lite Micro assertion failed");
++
+ #endif  // TENSORFLOW_LITE_KERNELS_OP_MACROS_H_
+diff --git a/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.cc b/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.cc
+index 8655cfdc..159edc7d 100644
+--- a/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.cc
++++ b/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.cc
+@@ -145,6 +145,7 @@ void SingleArenaBufferAllocator::DeallocateTemp(uint8_t* temp_buf) {
+ }
+ 
+ bool SingleArenaBufferAllocator::IsAllTempDeallocated() {
++  return true;
+   if (temp_buffer_count_ != 0 || temp_buffer_ptr_check_sum_ != 0) {
+     MicroPrintf(
+         "Number of allocated temp buffers: %d. Checksum passing status: %d",
+@@ -179,6 +180,7 @@ size_t SingleArenaBufferAllocator::GetPersistentUsedBytes() const {
+ }
+ 
+ size_t SingleArenaBufferAllocator::GetAvailableMemory(size_t alignment) const {
++  if(temp_ > tail_) return 0;
+   uint8_t* const aligned_temp = AlignPointerUp(temp_, alignment);
+   uint8_t* const aligned_tail = AlignPointerDown(tail_, alignment);
+   return aligned_tail - aligned_temp;
+diff --git a/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.h b/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.h
+index a2e39588..6ab41c1f 100644
+--- a/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.h
++++ b/tensorflow/lite/micro/arena_allocator/single_arena_buffer_allocator.h
+@@ -119,7 +119,7 @@ class SingleArenaBufferAllocator : public INonPersistentBufferAllocator,
+   // Returns a pointer to the current end of the tail buffer.
+   uint8_t* tail() const;
+ 
+- private:
++  public:
+   size_t GetBufferSize() const;
+   uint8_t* buffer_head_;
+   uint8_t* buffer_tail_;
+diff --git a/tensorflow/lite/micro/compatibility.h b/tensorflow/lite/micro/compatibility.h
+index 49acb28f..4d9e6d25 100644
+--- a/tensorflow/lite/micro/compatibility.h
++++ b/tensorflow/lite/micro/compatibility.h
+@@ -24,7 +24,7 @@ limitations under the License.
+ // the private section.
+ #ifdef TF_LITE_STATIC_MEMORY
+ #define TF_LITE_REMOVE_VIRTUAL_DELETE \
+-  void operator delete(void* p) {}
++public: void operator delete(void* p) {}
+ #else
+ #define TF_LITE_REMOVE_VIRTUAL_DELETE
+ #endif
+diff --git a/tensorflow/lite/micro/fake_micro_context.cc b/tensorflow/lite/micro/fake_micro_context.cc
+index 88747988..651bdf38 100644
+--- a/tensorflow/lite/micro/fake_micro_context.cc
++++ b/tensorflow/lite/micro/fake_micro_context.cc
+@@ -51,6 +51,7 @@ void FakeMicroContext::DeallocateTempTfLiteTensor(TfLiteTensor* tensor) {
+ }
+ 
+ bool FakeMicroContext::IsAllTempTfLiteTensorDeallocated() {
++  return true;
+   return !allocated_temp_count_;
+ }
+ 
+diff --git a/tensorflow/lite/micro/kernels/add.cc b/tensorflow/lite/micro/kernels/add.cc
+index fde047a4..1ee52545 100644
+--- a/tensorflow/lite/micro/kernels/add.cc
++++ b/tensorflow/lite/micro/kernels/add.cc
+@@ -193,8 +193,10 @@ TfLiteStatus AddEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_ADD() {
+   return tflite::micro::RegisterOp(AddInit, AddPrepare, AddEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/batch_matmul.cc b/tensorflow/lite/micro/kernels/batch_matmul.cc
+index bbb1c0b0..876dd118 100644
+--- a/tensorflow/lite/micro/kernels/batch_matmul.cc
++++ b/tensorflow/lite/micro/kernels/batch_matmul.cc
+@@ -340,6 +340,8 @@ TfLiteStatus EvalInt16(TfLiteContext* context, const OpDataBatchMatmul& data,
+   return kTfLiteOk;
+ }
+ 
++}  // namespace
++
+ // Perform a batch matrix multiply on
+ // LHS <..., A, B>  X  RHS<..., B, C>
+ // where the leading dimensions of LHS and RHS obey broadcasting rules
+@@ -435,11 +437,11 @@ TfLiteStatus BatchMatMulEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
+-}  // namespace
+-
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_BATCH_MATMUL() {
+   return tflite::micro::RegisterOp(BatchMatMulInit, BatchMatMulPrepare,
+                                    BatchMatMulEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/add.cc b/tensorflow/lite/micro/kernels/cmsis_nn/add.cc
+index fb166a15..e6810cf0 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/add.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/add.cc
+@@ -278,7 +278,6 @@ TfLiteStatus EvalAddQuantized(TfLiteContext* context, TfLiteNode* node,
+   return kTfLiteOk;
+ }
+ 
+-}  // namespace
+ 
+ void* InitAdd(TfLiteContext* context, const char* buffer, size_t length) {
+   TFLITE_DCHECK(context->AllocatePersistentBuffer != nullptr);
+@@ -404,7 +403,13 @@ TfLiteStatus EvalAddInt16(TfLiteContext* context, TfLiteNode* node) {
+ 
+   return kTfLiteOk;
+ }
++}  // namespace
++
++
++extern TfLiteStatus AddEval(TfLiteContext* context, TfLiteNode* node);
+ 
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
+ TFLMRegistration Register_ADD() {
+   return tflite::micro::RegisterOp(InitAdd, PrepareAdd, EvalAdd);
+ }
+@@ -416,5 +421,32 @@ TFLMRegistration Register_ADD_INT8() {
+ TFLMRegistration Register_ADD_INT16() {
+   return tflite::micro::RegisterOp(InitAdd, PrepareAdd, EvalAddInt16);
+ }
++#else
++
++TFLMRegistration Register_ADD() {
++  return tflite::micro::RegisterOp(InitAdd, PrepareAdd, AddEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++
++int cmsis_nn_add_get_init_size()
++{
++  return sizeof(OpData);
++}
++TfLiteStatus cmsis_nn_add_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return PrepareAdd(context, node);
++}
++
++TfLiteStatus cmsis_nn_add_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return EvalAdd(context, node);
++  #else
++  return AddEval(context, node);
++  #endif
++}
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/batch_matmul.cc b/tensorflow/lite/micro/kernels/cmsis_nn/batch_matmul.cc
+index 7c0cb69b..20a04943 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/batch_matmul.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/batch_matmul.cc
+@@ -520,6 +520,11 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++extern TfLiteStatus BatchMatMulEval(TfLiteContext* context, TfLiteNode* node) ;
++
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
+ TFLMRegistration Register_BATCH_MATMUL() {
+   return tflite::micro::RegisterOp(Init, Prepare, Eval);
+ }
+@@ -532,4 +537,32 @@ TFLMRegistration Register_BATCH_MATMUL_INT16() {
+   return tflite::micro::RegisterOp(Init, Prepare, EvalInt16);
+ }
+ 
++#else
++
++TFLMRegistration Register_BATCH_MATMUL() {
++  return tflite::micro::RegisterOp(Init, Prepare, BatchMatMulEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++int cmsis_nn_batch_matmul_get_init_size()
++{
++  return sizeof(OpData);
++}
++TfLiteStatus cmsis_nn_batch_matmul_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return Prepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_batch_matmul_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return Eval(context, node);
++  #else
++  return BatchMatMulEval(context, node);
++  #endif
++}
++
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/conv.cc b/tensorflow/lite/micro/kernels/cmsis_nn/conv.cc
+index cae68c76..44d7d1c7 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/conv.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/conv.cc
+@@ -481,6 +481,11 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++extern TfLiteStatus ConvEval(TfLiteContext* context, TfLiteNode* node);
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
++
+ TFLMRegistration Register_CONV_2D() {
+   return tflite::micro::RegisterOp(Init, Prepare, Eval);
+ }
+@@ -497,4 +502,32 @@ TFLMRegistration Register_CONV_2D_INT16() {
+   return tflite::micro::RegisterOp(Init, Prepare, EvalInt16x8);
+ }
+ 
++#else
++
++TFLMRegistration Register_CONV_2D() {
++  return tflite::micro::RegisterOp(Init, Prepare, ConvEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++
++int cmsis_nn_conv_get_init_size()
++{
++  return sizeof(OpData);
++}
++TfLiteStatus cmsis_nn_conv_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return Prepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_conv_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return Eval(context, node);
++  #else
++  return ConvEval(context, node);
++  #endif
++}
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/depthwise_conv.cc b/tensorflow/lite/micro/kernels/cmsis_nn/depthwise_conv.cc
+index 7183a28a..a3a90d07 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/depthwise_conv.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/depthwise_conv.cc
+@@ -508,6 +508,10 @@ TfLiteStatus EvalInt4(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++extern TfLiteStatus DepthwiseConvEval(TfLiteContext* context, TfLiteNode* node);
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
+ TFLMRegistration Register_DEPTHWISE_CONV_2D() {
+   return tflite::micro::RegisterOp(Init, Prepare, Eval);
+ }
+@@ -524,4 +528,33 @@ TFLMRegistration Register_DEPTHWISE_CONV_2D_INT4() {
+   return tflite::micro::RegisterOp(Init, Prepare, EvalInt4);
+ }
+ 
++#else
++
++TFLMRegistration Register_DEPTHWISE_CONV_2D() {
++  return tflite::micro::RegisterOp(Init, Prepare, DepthwiseConvEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++
++int cmsis_nn_depthwise_conv_get_init_size()
++{
++  return sizeof(OpData);
++}
++TfLiteStatus cmsis_nn_depthwise_conv_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return Prepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_depthwise_conv_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return Eval(context, node);
++  #else
++  return DepthwiseConvEval(context, node);
++  #endif
++}
++
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/fully_connected.cc b/tensorflow/lite/micro/kernels/cmsis_nn/fully_connected.cc
+index 7b4e1319..2286150a 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/fully_connected.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/fully_connected.cc
+@@ -306,7 +306,7 @@ TfLiteStatus EvalQuantizedInt8(TfLiteContext* context, TfLiteNode* node,
+       per_channel_quant_params.shift =
+           data.reference_op_data.per_channel_output_shift;
+     } else {
+-      TFLITE_DCHECK_GE(data.buffer_conv_1x1_idx, 4);
++      //TFLITE_DCHECK_GE(data.buffer_conv_1x1_idx, 4);
+       per_channel_quant_params.multiplier = static_cast<int32_t*>(
+           context->GetScratchBuffer(context, data.buffer_conv_1x1_idx));
+       per_channel_quant_params.shift =
+@@ -545,6 +545,10 @@ TfLiteStatus EvalInt16(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++extern TfLiteStatus FullyConnectedEval(TfLiteContext* context, TfLiteNode* node);
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
+ TFLMRegistration Register_FULLY_CONNECTED() {
+   return tflite::micro::RegisterOp(Init, Prepare, Eval);
+ }
+@@ -564,5 +568,31 @@ TFLMRegistration Register_FULLY_CONNECTED_INT16() {
+ TFLMInferenceRegistration RegisterInference_FULLY_CONNECTED() {
+   return tflite::micro::RegisterOp(Eval);
+ }
++#else
++TFLMRegistration Register_FULLY_CONNECTED() {
++  return tflite::micro::RegisterOp(Init, Prepare, FullyConnectedEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++int cmsis_nn_fully_connected_get_init_size()
++{
++  return sizeof(OpData);
++}
++TfLiteStatus cmsis_nn_fully_connected_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return Prepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_fully_connected_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return Eval(context, node);
++  #else
++  return FullyConnectedEval(context, node);
++  #endif
++}
++
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/maximum_minimum.cc b/tensorflow/lite/micro/kernels/cmsis_nn/maximum_minimum.cc
+index a6affaa1..5c3927cc 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/maximum_minimum.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/maximum_minimum.cc
+@@ -228,6 +228,11 @@ TfLiteStatus EvalMinimumInt8(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
++
+ TFLMRegistration Register_MAXIMUM() {
+   return tflite::micro::RegisterOp(nullptr, nullptr, EvalMaximum);
+ }
+@@ -244,4 +249,36 @@ TFLMRegistration Register_MINIMUM_INT8() {
+   return tflite::micro::RegisterOp(nullptr, nullptr, EvalMinimumInt8);
+ }
+ 
++#else
++
++TFLMRegistration Register_MAXIMUM() {
++  return tflite::micro::RegisterOp(nullptr, nullptr, MaximumEval);
++}
++
++TFLMRegistration Register_MINIMUM() {
++  return tflite::micro::RegisterOp(nullptr, nullptr, MinimumEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++
++TfLiteStatus cmsis_nn_maximum_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return EvalMaximum(context, node);
++  #else
++  return MaximumEval(context, node);
++  #endif
++}
++
++TfLiteStatus cmsis_nn_minimum_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return EvalMinimum(context, node);
++  #else
++  return MinimumEval(context, node);
++  #endif
++}
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/mul.cc b/tensorflow/lite/micro/kernels/cmsis_nn/mul.cc
+index 571d88ab..7a4ccf0f 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/mul.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/mul.cc
+@@ -94,8 +94,6 @@ void EvalQuantized(TfLiteContext* context, TfLiteNode* node,
+   }
+ }
+ 
+-}  // namespace
+-
+ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
+   TFLITE_DCHECK(node->builtin_data != nullptr);
+   auto* params = reinterpret_cast<TfLiteMulParams*>(node->builtin_data);
+@@ -169,6 +167,14 @@ TfLiteStatus EvalInt16(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
++}  // namespace
++
++extern TfLiteStatus MulEval(TfLiteContext* context, TfLiteNode* node);
++
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
++
+ TFLMRegistration Register_MUL() {
+   return tflite::micro::RegisterOp(MulInit, MulPrepare, Eval);
+ }
+@@ -181,4 +187,31 @@ TFLMRegistration Register_MUL_INT16() {
+   return tflite::micro::RegisterOp(MulInit, MulPrepare, EvalInt16);
+ }
+ 
++#else
++
++TFLMRegistration Register_MUL() {
++  return tflite::micro::RegisterOp(MulInit, MulPrepare, MulEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++int cmsis_nn_mul_get_init_size()
++{
++  return sizeof(OpDataMul);
++}
++TfLiteStatus cmsis_nn_mul_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return MulPrepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_mul_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return Eval(context, node);
++  #else
++  return MulEval(context, node);
++  #endif
++}
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/pooling.cc b/tensorflow/lite/micro/kernels/cmsis_nn/pooling.cc
+index d8311dbb..ee7ca12e 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/pooling.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/pooling.cc
+@@ -319,6 +319,13 @@ TfLiteStatus MaxEvalInt16(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++#ifndef __arm__
++extern TfLiteStatus AverageEval(TfLiteContext* context, TfLiteNode* node);
++extern TfLiteStatus MaxEval(TfLiteContext* context, TfLiteNode* node) ;
++#endif
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
+ TFLMRegistration Register_AVERAGE_POOL_2D_INT8() {
+   return tflite::micro::RegisterOp(Init, AveragePrepare, AverageEvalInt8);
+ }
+@@ -343,4 +350,49 @@ TFLMRegistration Register_MAX_POOL_2D() {
+   return tflite::micro::RegisterOp(Init, MaxPrepare, MaxEval);
+ }
+ 
++#else
++
++TFLMRegistration Register_AVERAGE_POOL_2D() {
++  return tflite::micro::RegisterOp(Init, AveragePrepare, tflite::AverageEval);
++}
++
++TFLMRegistration Register_MAX_POOL_2D() {
++  return tflite::micro::RegisterOp(Init, MaxPrepare, tflite::MaxEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++int cmsis_nn_pooling_get_init_size()
++{
++  return sizeof(OpData);
++}
++TfLiteStatus cmsis_nn_max_pool_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return MaxPrepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_max_pool_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return MaxEval(context, node);
++  #else
++  return tflite::MaxEval(context, node);
++  #endif
++}
++
++TfLiteStatus cmsis_nn_average_pool_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return AveragePrepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_average_pool_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return AverageEval(context, node);
++  #else
++  return tflite::AverageEval(context, node);
++  #endif
++}
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/softmax.cc b/tensorflow/lite/micro/kernels/cmsis_nn/softmax.cc
+index 65156918..8a10ef0e 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/softmax.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/softmax.cc
+@@ -201,6 +201,13 @@ TfLiteStatus SoftmaxEvalInt16(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++#ifndef __arm__
++extern TfLiteStatus SoftmaxEval(TfLiteContext* context, TfLiteNode* node);
++#endif
++
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
+ TFLMRegistration Register_SOFTMAX() {
+   return tflite::micro::RegisterOp(Init, Prepare, SoftmaxEval);
+ }
+@@ -217,4 +224,31 @@ TFLMRegistration Register_SOFTMAX_INT16() {
+   return tflite::micro::RegisterOp(Init, Prepare, SoftmaxEvalInt16);
+ }
+ 
++#else
++TFLMRegistration Register_SOFTMAX() {
++  return tflite::micro::RegisterOp(Init, Prepare, tflite::SoftmaxEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++
++int cmsis_nn_softmax_get_init_size()
++{
++  return sizeof(CMSISNNSoftmaxParams);
++}
++TfLiteStatus cmsis_nn_softmax_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return Prepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_softmax_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return SoftmaxEval(context, node);
++  #else
++  return tflite::SoftmaxEval(context, node);
++  #endif
++}
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/cmsis_nn/transpose_conv.cc b/tensorflow/lite/micro/kernels/cmsis_nn/transpose_conv.cc
+index 0ece8279..d57fdf5d 100644
+--- a/tensorflow/lite/micro/kernels/cmsis_nn/transpose_conv.cc
++++ b/tensorflow/lite/micro/kernels/cmsis_nn/transpose_conv.cc
+@@ -504,6 +504,10 @@ TfLiteStatus EvalInt8(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++extern TfLiteStatus TransposeConvEval(TfLiteContext* context, TfLiteNode* node);
++
++#ifndef TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++#ifdef __arm__
+ TFLMRegistration Register_TRANSPOSE_CONV() {
+   return tflite::micro::RegisterOp(Init, Prepare, Eval);
+ }
+@@ -512,4 +516,32 @@ TFLMRegistration Register_TRANSPOSE_CONV_INT8() {
+   return tflite::micro::RegisterOp(Init, Prepare, EvalInt8);
+ }
+ 
++#else
++
++TFLMRegistration Register_TRANSPOSE_CONV() {
++  return tflite::micro::RegisterOp(Init, Prepare, TransposeConvEval);
++}
++
++#endif // __arm__
++#endif // TFLITE_MICRO_CMSIS_KERNEL_REGISTRATIONS_DISABLED
++
++
++int cmsis_nn_transpose_conv_get_init_size()
++{
++  return sizeof(OpData);
++}
++TfLiteStatus cmsis_nn_transpose_conv_prepare(TfLiteContext* context, TfLiteNode* node)
++{
++  return Prepare(context, node);
++}
++
++TfLiteStatus cmsis_nn_transpose_conv_invoke(TfLiteContext* context, TfLiteNode* node)
++{
++  #ifdef __arm__
++  return Eval(context, node);
++  #else
++  return TransposeConvEval(context, node);
++  #endif
++}
++
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/concatenation.cc b/tensorflow/lite/micro/kernels/concatenation.cc
+index 151d3b47..24b9501c 100644
+--- a/tensorflow/lite/micro/kernels/concatenation.cc
++++ b/tensorflow/lite/micro/kernels/concatenation.cc
+@@ -23,16 +23,17 @@ limitations under the License.
+ #include "tensorflow/lite/kernels/kernel_util.h"
+ #include "tensorflow/lite/micro/kernels/kernel_util.h"
+ #include "tensorflow/lite/micro/micro_log.h"
++#include "tflite_micro_logger.hpp"
+ 
+ namespace tflite {
+ 
+ namespace {
+ 
+-constexpr int kMaxInputNum = 10;  // Maximum number of input tensors
+ constexpr int kOutputTensor = 0;
+ 
+ struct OpData {
+   ConcatenationParams params;
++  int scratch_buffer_index;
+ 
+ #ifdef USE_TFLM_COMPRESSION
+ 
+@@ -42,6 +43,13 @@ struct OpData {
+ #endif  // USE_TFLM_COMPRESSION
+ };
+ 
++struct ShapeContext
++{
++  RuntimeShape input_shape;
++  const RuntimeShape* input_shape_ptr;
++  const void* input_data;
++};
++
+ // Handles negative axis index, coerces to positive index value.
+ inline int CalculatePositiveAxis(int axis, const TfLiteTensor* output_tensor) {
+   if (axis >= 0) {
+@@ -58,7 +66,7 @@ inline int CalculatePositiveAxis(int axis, const TfLiteTensor* output_tensor) {
+ // Gets shapes from a list of tensors.
+ inline void GetAllInputTensorShapes(const TfLiteContext* context,
+                                     const TfLiteNode* node,
+-                                    RuntimeShape all_shapes[kMaxInputNum]) {
++                                    RuntimeShape *all_shapes) {
+   for (int i = 0; i < node->inputs->size; ++i) {
+     const TfLiteEvalTensor* t = tflite::micro::GetEvalInput(context, node, i);
+     RuntimeShape shape = tflite::micro::GetTensorShape(t);
+@@ -68,7 +76,7 @@ inline void GetAllInputTensorShapes(const TfLiteContext* context,
+ 
+ // Get shape pointers from a list of shapes.
+ inline void GetShapesPointers(const RuntimeShape* shapes, size_t num,
+-                              const RuntimeShape* pointers[]) {
++                              const RuntimeShape** pointers) {
+   for (size_t i = 0; i < num; ++i) {
+     pointers[i] = &shapes[i];
+   }
+@@ -78,7 +86,7 @@ inline void GetShapesPointers(const RuntimeShape* shapes, size_t num,
+ template <typename T>
+ inline void GetAllInputTensorData(const TfLiteContext* context,
+                                   const TfLiteNode* node,
+-                                  const T* all_data[kMaxInputNum]) {
++                                  const T** all_data) {
+ #ifdef USE_TFLM_COMPRESSION
+   const OpData* data = static_cast<const OpData*>(node->user_data);
+   MicroContext* micro_context = GetMicroContext(context);
+@@ -100,13 +108,20 @@ inline void GetAllInputTensorData(const TfLiteContext* context,
+ template <typename data_type>
+ void EvalUnquantized(TfLiteContext* context, TfLiteNode* node) {
+   // Collect the shapes and data pointer of input tensors
+-  RuntimeShape inputs_shape[kMaxInputNum];
+-  const RuntimeShape* inputs_shape_ptr[kMaxInputNum];
+-  const data_type* inputs_data[kMaxInputNum];
+-  TFLITE_DCHECK(context != nullptr);
+-  TFLITE_DCHECK(node != nullptr);
+   TFLITE_DCHECK(node->user_data != nullptr);
+-  const OpData* data = static_cast<const OpData*>(node->user_data);
++  const OpData& data = *static_cast<const OpData*>(node->user_data);
++  const auto num_input = node->inputs->size;
++  auto buffer_ptr = static_cast<uint8_t*>(context->GetScratchBuffer(context, data.scratch_buffer_index));
++
++  auto inputs_shape = reinterpret_cast<RuntimeShape*>(buffer_ptr);
++  memset((void*)inputs_shape, 0, sizeof(RuntimeShape) * num_input);
++  buffer_ptr += sizeof(RuntimeShape) * num_input;
++
++  auto inputs_shape_ptr = reinterpret_cast<const RuntimeShape**>(buffer_ptr);
++  buffer_ptr += sizeof(const RuntimeShape*) * num_input;
++
++  auto inputs_data = reinterpret_cast<const data_type**>(buffer_ptr);
++
+   GetAllInputTensorShapes(context, node, inputs_shape);
+   GetShapesPointers(inputs_shape, node->inputs->size, inputs_shape_ptr);
+   GetAllInputTensorData(context, node, inputs_data);
+@@ -114,7 +129,7 @@ void EvalUnquantized(TfLiteContext* context, TfLiteNode* node) {
+   TfLiteEvalTensor* output =
+       tflite::micro::GetEvalOutput(context, node, kOutputTensor);
+ 
+-  reference_ops::Concatenation(data->params, inputs_shape_ptr, inputs_data,
++  reference_ops::Concatenation(data.params, inputs_shape_ptr, inputs_data,
+                                tflite::micro::GetTensorShape(output),
+                                tflite::micro::GetTensorData<data_type>(output));
+ }
+@@ -155,7 +170,6 @@ TfLiteStatus ConcatenationPrepare(TfLiteContext* context, TfLiteNode* node) {
+ 
+   // This implementation does not support large number of input tensors
+   const int num_inputs = NumInputs(node);
+-  TF_LITE_ENSURE(context, num_inputs <= kMaxInputNum);
+ 
+   // Calculate OpData.
+   TFLITE_DCHECK(node->user_data != nullptr);
+@@ -180,13 +194,13 @@ TfLiteStatus ConcatenationPrepare(TfLiteContext* context, TfLiteNode* node) {
+     if (input_type == kTfLiteInt8) {
+       // Make sure there is no re-scaling needed for Int8 quantized kernel. This
+       // is a restriction we introduced to Int8 kernels.
+-      TF_LITE_ENSURE_EQ(context, static_cast<double>(input->params.scale),
++      NPU_TOOLKIT_CHECK_EQ(static_cast<double>(input->params.scale),
+                         static_cast<double>(output_tensor->params.scale));
+-      TF_LITE_ENSURE_EQ(context, input->params.zero_point,
++      NPU_TOOLKIT_CHECK_EQ(input->params.zero_point,
+                         output_tensor->params.zero_point);
+     } else if (input_type == kTfLiteInt16) {
+       // Make sure that all Int16 inputs have a null zero-point.
+-      TF_LITE_ENSURE_EQ(context, input->params.zero_point, 0);
++      NPU_TOOLKIT_CHECK_EQ(input->params.zero_point, 0);
+     }
+ 
+ #ifdef USE_TFLM_COMPRESSION
+@@ -201,6 +215,13 @@ TfLiteStatus ConcatenationPrepare(TfLiteContext* context, TfLiteNode* node) {
+     micro_context->DeallocateTempTfLiteTensor(input);
+   }
+ 
++  TF_LITE_ENSURE_STATUS(
++    context->RequestScratchBufferInArena(
++      context,
++      num_inputs * (sizeof(RuntimeShape) + sizeof(RuntimeShape*) + sizeof(void*)),
++      &data->scratch_buffer_index
++  ));
++
+   if (input_type == kTfLiteInt16) {
+     TF_LITE_ENSURE_EQ(context, output_tensor->params.zero_point, 0);
+   }
+@@ -264,9 +285,11 @@ TfLiteStatus ConcatenationEval(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++#if !defined(TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED) && !defined(TFLITE_MICRO_SW_REF_KERNEL_CONCATENATION_REGISTRATION_DISABLED)
+ TFLMRegistration Register_CONCATENATION() {
+   return tflite::micro::RegisterOp(ConcatenationInit, ConcatenationPrepare,
+                                    ConcatenationEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/conv.cc b/tensorflow/lite/micro/kernels/conv.cc
+index 7be915ab..076fa509 100644
+--- a/tensorflow/lite/micro/kernels/conv.cc
++++ b/tensorflow/lite/micro/kernels/conv.cc
+@@ -25,7 +25,6 @@ limitations under the License.
+ #include "tensorflow/lite/micro/micro_log.h"
+ 
+ namespace tflite {
+-namespace {
+ 
+ TfLiteStatus ConvEval(TfLiteContext* context, TfLiteNode* node) {
+   const TfLiteEvalTensor* input =
+@@ -188,10 +187,11 @@ TfLiteStatus ConvEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
+-}  // namespace
+ 
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_CONV_2D() {
+   return tflite::micro::RegisterOp(ConvInit, ConvPrepare, ConvEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/conv_common.cc b/tensorflow/lite/micro/kernels/conv_common.cc
+index 41f81411..85d6c693 100644
+--- a/tensorflow/lite/micro/kernels/conv_common.cc
++++ b/tensorflow/lite/micro/kernels/conv_common.cc
+@@ -22,6 +22,12 @@ limitations under the License.
+ #include "tensorflow/lite/micro/kernels/kernel_util.h"
+ #include "tensorflow/lite/micro/micro_log.h"
+ 
++#ifdef TFLITE_MICRO_RECORDER_ENABLED
++#include "tflite_micro_recorder.hpp"
++#else
++#define NPU_TOOLKIT_RECORD_CONV_PARAMS(...)
++#endif
++
+ namespace tflite {
+ 
+ const int kConvInputTensor = 0;
+@@ -69,6 +75,7 @@ ConvParams ConvParamsQuantized(const TfLiteConvParams& params,
+   op_params.dilation_width_factor = params.dilation_width_factor;
+   op_params.quantized_activation_min = data.output_activation_min;
+   op_params.quantized_activation_max = data.output_activation_max;
++  NPU_TOOLKIT_RECORD_CONV_PARAMS(op_params, data.per_channel_output_multiplier, data.per_channel_output_shift, data.padding.height_offset);
+   return op_params;
+ }
+ 
+@@ -113,6 +120,7 @@ TfLiteStatus CalculateOpDataConv(TfLiteContext* context, TfLiteNode* node,
+   // parameters set. This is usually done during quantized training.
+   if (data_type != kTfLiteFloat32) {
+     int output_channels = filter->dims->data[kConvQuantizedDimension];
++    data->padding.height_offset = output_channels; // Patched by NPU_TOOLKIT, the height_offset member isnt used, so we hack it to store the number of channels
+ 
+     TF_LITE_ENSURE_STATUS(tflite::PopulateConvolutionQuantizationParams(
+         context, input, filter, bias, output, params.activation,
+diff --git a/tensorflow/lite/micro/kernels/depthwise_conv.cc b/tensorflow/lite/micro/kernels/depthwise_conv.cc
+index 489e83f9..be3d8055 100644
+--- a/tensorflow/lite/micro/kernels/depthwise_conv.cc
++++ b/tensorflow/lite/micro/kernels/depthwise_conv.cc
+@@ -25,7 +25,6 @@ limitations under the License.
+ #include "tensorflow/lite/micro/micro_log.h"
+ 
+ namespace tflite {
+-namespace {
+ 
+ void* DepthwiseConvInit(TfLiteContext* context, const char* buffer,
+                         size_t length) {
+@@ -180,11 +179,12 @@ TfLiteStatus DepthwiseConvEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
+-}  // namespace
+ 
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_DEPTHWISE_CONV_2D() {
+   return tflite::micro::RegisterOp(DepthwiseConvInit, DepthwiseConvPrepare,
+                                    DepthwiseConvEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/depthwise_conv_common.cc b/tensorflow/lite/micro/kernels/depthwise_conv_common.cc
+index b68715ea..f75d4241 100644
+--- a/tensorflow/lite/micro/kernels/depthwise_conv_common.cc
++++ b/tensorflow/lite/micro/kernels/depthwise_conv_common.cc
+@@ -26,6 +26,13 @@ limitations under the License.
+ #include "tensorflow/lite/micro/kernels/kernel_util.h"
+ #include "tensorflow/lite/micro/micro_log.h"
+ 
++#ifdef TFLITE_MICRO_RECORDER_ENABLED
++#include "tflite_micro_recorder.hpp"
++#else
++#define NPU_TOOLKIT_RECORD_DEPTHWISE_CONV_PARAMS(...)
++#endif
++
++
+ namespace tflite {
+ 
+ const int kDepthwiseConvInputTensor = 0;
+@@ -75,6 +82,7 @@ DepthwiseParams DepthwiseConvParamsQuantized(
+   op_params.depth_multiplier = params.depth_multiplier;
+   op_params.quantized_activation_min = data.output_activation_min;
+   op_params.quantized_activation_max = data.output_activation_max;
++  NPU_TOOLKIT_RECORD_DEPTHWISE_CONV_PARAMS(op_params, data.per_channel_output_multiplier, data.per_channel_output_shift, data.padding.height_offset);
+   return op_params;
+ }
+ 
+@@ -113,6 +121,7 @@ TfLiteStatus CalculateOpDataDepthwiseConv(
+   // parameters set. This is usually done during quantized training.
+   if (data_type != kTfLiteFloat32) {
+     int output_channels = filter->dims->data[kDepthwiseConvQuantizedDimension];
++    data->padding.height_offset = output_channels; // Patched by NPU_TOOLKIT, the height_offset member isnt used, so we hack it to store the number of channels
+ 
+     TF_LITE_ENSURE_STATUS(tflite::PopulateConvolutionQuantizationParams(
+         context, input, filter, bias, output, params.activation,
+diff --git a/tensorflow/lite/micro/kernels/elementwise.cc b/tensorflow/lite/micro/kernels/elementwise.cc
+index a33c3406..255bb923 100644
+--- a/tensorflow/lite/micro/kernels/elementwise.cc
++++ b/tensorflow/lite/micro/kernels/elementwise.cc
+@@ -397,11 +397,13 @@ TFLMRegistration Register_SQRT() {
+       nullptr, GenericPrepare<IsNumericSupportedType>, SqrtEval);
+ }
+ 
++#if !defined(TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED) && !defined(TFLITE_MICRO_SW_REF_KERNEL_RSQRT_REGISTRATION_DISABLED)
+ TFLMRegistration Register_RSQRT() {
+   return tflite::micro::RegisterOp(
+       ElementWiseAbsRsqrtInit,
+       PrepareAbsRsqrt<IsRsqrtSupportedType, kRsrqtNameId>, RsqrtEval);
+ }
++#endif
+ 
+ TFLMRegistration Register_SQUARE() {
+   return tflite::micro::RegisterOp(
+diff --git a/tensorflow/lite/micro/kernels/fully_connected.cc b/tensorflow/lite/micro/kernels/fully_connected.cc
+index 69027280..9ea9757d 100644
+--- a/tensorflow/lite/micro/kernels/fully_connected.cc
++++ b/tensorflow/lite/micro/kernels/fully_connected.cc
+@@ -24,7 +24,6 @@ limitations under the License.
+ #include "tensorflow/lite/micro/micro_log.h"
+ 
+ namespace tflite {
+-namespace {
+ 
+ void* FullyConnectedInit(TfLiteContext* context, const char* buffer,
+                          size_t length) {
+@@ -277,12 +276,13 @@ TfLiteStatus FullyConnectedEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
+-}  // namespace
+ 
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_FULLY_CONNECTED() {
+   return tflite::micro::RegisterOp(FullyConnectedInit, FullyConnectedPrepare,
+                                    FullyConnectedEval);
+ }
++#endif
+ 
+ TFLMInferenceRegistration RegisterInference_FULLY_CONNECTED() {
+   return tflite::micro::RegisterOp(FullyConnectedEval);
+diff --git a/tensorflow/lite/micro/kernels/fully_connected_common.cc b/tensorflow/lite/micro/kernels/fully_connected_common.cc
+index 53709d36..76306443 100644
+--- a/tensorflow/lite/micro/kernels/fully_connected_common.cc
++++ b/tensorflow/lite/micro/kernels/fully_connected_common.cc
+@@ -24,6 +24,12 @@ limitations under the License.
+ #include "tensorflow/lite/micro/kernels/fully_connected.h"
+ #include "tensorflow/lite/micro/kernels/kernel_util.h"
+ 
++#ifdef TFLITE_MICRO_RECORDER_ENABLED
++#include "tflite_micro_recorder.hpp"
++#else
++#define NPU_TOOLKIT_RECORD_FULLY_CONNECTED_PARAMS(...)
++#endif
++
+ namespace tflite {
+ 
+ const int kFullyConnectedInputTensor = 0;
+@@ -41,6 +47,7 @@ FullyConnectedParams FullyConnectedParamsQuantized(
+   op_params.output_shift = op_data.output_shift;
+   op_params.quantized_activation_min = op_data.output_activation_min;
+   op_params.quantized_activation_max = op_data.output_activation_max;
++  NPU_TOOLKIT_RECORD_FULLY_CONNECTED_PARAMS(op_params);
+   return op_params;
+ }
+ 
+diff --git a/tensorflow/lite/micro/kernels/kernel_runner.h b/tensorflow/lite/micro/kernels/kernel_runner.h
+index 8dbd7f8b..b26d6c10 100644
+--- a/tensorflow/lite/micro/kernels/kernel_runner.h
++++ b/tensorflow/lite/micro/kernels/kernel_runner.h
+@@ -72,8 +72,12 @@ class KernelRunner {
+   // are enabled for all kernel tests.
+   bool ValidateTempBufferDeallocated();
+ 
+- private:
+-  static constexpr int kKernelRunnerBufferSize_ = 10000;
++  public: // private:
++  #ifdef __arm__
++  static constexpr int kKernelRunnerBufferSize_ = 32*1024;
++  #else
++  static constexpr int kKernelRunnerBufferSize_ = 16*1024*1024;
++  #endif
+   static uint8_t kKernelRunnerBuffer_[kKernelRunnerBufferSize_];
+ 
+   TfLiteContext context_ = {};
+diff --git a/tensorflow/lite/micro/kernels/lstm_eval.h b/tensorflow/lite/micro/kernels/lstm_eval.h
+index 62bc6354..be2b9aab 100644
+--- a/tensorflow/lite/micro/kernels/lstm_eval.h
++++ b/tensorflow/lite/micro/kernels/lstm_eval.h
+@@ -62,7 +62,7 @@ class LstmTensors {
+   }
+   const TfLiteTensor* OutputTensor() const { return output_tensor_; }
+ 
+- private:
++  public:
+   // see lstm_shared.h for tensor names
+   MicroContext* micro_context_;
+   TfLiteTensor* internal_tensors_[24];
+diff --git a/tensorflow/lite/micro/kernels/maximum_minimum.cc b/tensorflow/lite/micro/kernels/maximum_minimum.cc
+index ef4a0a6a..0db58759 100644
+--- a/tensorflow/lite/micro/kernels/maximum_minimum.cc
++++ b/tensorflow/lite/micro/kernels/maximum_minimum.cc
+@@ -66,14 +66,24 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
+ 
+ }  // namespace
+ 
++TfLiteStatus MaximumEval(TfLiteContext* context, TfLiteNode* node) {
++  return Eval<kReference, MaximumOp>(context, node);
++}
++
++TfLiteStatus MinimumEval(TfLiteContext* context, TfLiteNode* node) {
++  return Eval<kReference, MinimumOp>(context, node);
++}
++
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_MAXIMUM() {
+   return tflite::micro::RegisterOp(nullptr, nullptr,
+-                                   Eval<kReference, MaximumOp>);
++                                   MaximumEval);
+ }
+ 
+ TFLMRegistration Register_MINIMUM() {
+   return tflite::micro::RegisterOp(nullptr, nullptr,
+-                                   Eval<kReference, MinimumOp>);
++                                   MinimumEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/maximum_minimum.h b/tensorflow/lite/micro/kernels/maximum_minimum.h
+index 34d7e239..d0da9b39 100644
+--- a/tensorflow/lite/micro/kernels/maximum_minimum.h
++++ b/tensorflow/lite/micro/kernels/maximum_minimum.h
+@@ -100,6 +100,10 @@ inline TFLMRegistration Register_MINIMUM_INT8() { return Register_MINIMUM(); }
+ 
+ #endif
+ 
++
++TfLiteStatus MaximumEval(TfLiteContext* context, TfLiteNode* node);
++TfLiteStatus MinimumEval(TfLiteContext* context, TfLiteNode* node);
++
+ }  // namespace tflite
+ 
+ #endif  // TENSORFLOW_LITE_MICRO_KERNELS_MAXIMUM_MINIMUM_H_
+diff --git a/tensorflow/lite/micro/kernels/micro_ops.h b/tensorflow/lite/micro/kernels/micro_ops.h
+index 2e33a673..7dc10ca4 100644
+--- a/tensorflow/lite/micro/kernels/micro_ops.h
++++ b/tensorflow/lite/micro/kernels/micro_ops.h
+@@ -15,9 +15,9 @@ limitations under the License.
+ #ifndef TENSORFLOW_LITE_MICRO_KERNELS_MICRO_OPS_H_
+ #define TENSORFLOW_LITE_MICRO_KERNELS_MICRO_OPS_H_
+ 
+-#include "signal/micro/kernels/irfft.h"
+-#include "signal/micro/kernels/rfft.h"
+-#include "tensorflow/lite/c/common.h"
++//#include "signal/micro/kernels/irfft.h"
++//#include "signal/micro/kernels/rfft.h"
++#include "tensorflow/lite/micro/micro_common.h"
+ 
+ // Forward declaration of all micro op kernel registration methods. These
+ // registrations are included with the standard `BuiltinOpResolver`.
+@@ -48,7 +48,7 @@ TFLMRegistration Register_CALL_ONCE();
+ TFLMRegistration Register_CAST();
+ TFLMRegistration Register_CEIL();
+ // TODO(b/160234179): Change custom OPs to also return by value.
+-TFLMRegistration* Register_CIRCULAR_BUFFER();
++//TFLMRegistration* Register_CIRCULAR_BUFFER();
+ TFLMRegistration Register_CONCATENATION();
+ TFLMRegistration Register_CONV_2D();
+ TFLMRegistration Register_COS();
+@@ -60,7 +60,7 @@ TFLMRegistration Register_DIV();
+ TFLMRegistration Register_ELU();
+ TFLMRegistration Register_EMBEDDING_LOOKUP();
+ TFLMRegistration Register_EQUAL();
+-TFLMRegistration* Register_ETHOSU();
++//TFLMRegistration* Register_ETHOSU();
+ TFLMRegistration Register_EXP();
+ TFLMRegistration Register_EXPAND_DIMS();
+ TFLMRegistration Register_FILL();
+@@ -138,20 +138,20 @@ TFLMRegistration Register_ZEROS_LIKE();
+ TFLMInferenceRegistration RegisterInference_FULLY_CONNECTED();
+ 
+ // TODO(b/160234179): Change custom OPs to also return by value.
+-namespace tflm_signal {
+-TFLMRegistration* Register_DELAY();
+-TFLMRegistration* Register_FFT_AUTO_SCALE();
+-TFLMRegistration* Register_FILTER_BANK();
+-TFLMRegistration* Register_FILTER_BANK_LOG();
+-TFLMRegistration* Register_FILTER_BANK_SPECTRAL_SUBTRACTION();
+-TFLMRegistration* Register_FILTER_BANK_SQUARE_ROOT();
+-TFLMRegistration* Register_ENERGY();
+-TFLMRegistration* Register_FRAMER();
+-TFLMRegistration* Register_OVERLAP_ADD();
+-TFLMRegistration* Register_PCAN();
+-TFLMRegistration* Register_STACKER();
+-TFLMRegistration* Register_WINDOW();
+-}  // namespace tflm_signal
++// namespace tflm_signal {
++// TFLMRegistration* Register_DELAY();
++// TFLMRegistration* Register_FFT_AUTO_SCALE();
++// TFLMRegistration* Register_FILTER_BANK();
++// TFLMRegistration* Register_FILTER_BANK_LOG();
++// TFLMRegistration* Register_FILTER_BANK_SPECTRAL_SUBTRACTION();
++// TFLMRegistration* Register_FILTER_BANK_SQUARE_ROOT();
++// TFLMRegistration* Register_ENERGY();
++// TFLMRegistration* Register_FRAMER();
++// TFLMRegistration* Register_OVERLAP_ADD();
++// TFLMRegistration* Register_PCAN();
++// TFLMRegistration* Register_STACKER();
++// TFLMRegistration* Register_WINDOW();
++// }  // namespace tflm_signal
+ 
+ }  // namespace tflite
+ 
+diff --git a/tensorflow/lite/micro/kernels/mul.cc b/tensorflow/lite/micro/kernels/mul.cc
+index d9473d4e..d70cee6e 100644
+--- a/tensorflow/lite/micro/kernels/mul.cc
++++ b/tensorflow/lite/micro/kernels/mul.cc
+@@ -61,8 +61,10 @@ TfLiteStatus MulEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_MUL() {
+   return tflite::micro::RegisterOp(MulInit, MulPrepare, MulEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/pooling.cc b/tensorflow/lite/micro/kernels/pooling.cc
+index c178d9b1..1732251d 100644
+--- a/tensorflow/lite/micro/kernels/pooling.cc
++++ b/tensorflow/lite/micro/kernels/pooling.cc
+@@ -22,8 +22,6 @@ limitations under the License.
+ 
+ namespace tflite {
+ 
+-namespace {
+-
+ TfLiteStatus AverageEval(TfLiteContext* context, TfLiteNode* node) {
+   TFLITE_DCHECK(node->builtin_data != nullptr);
+   auto* params = reinterpret_cast<TfLitePoolParams*>(node->builtin_data);
+@@ -91,6 +89,8 @@ TfLiteStatus MaxEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
++namespace {
++
+ void* PoolInit(TfLiteContext* context, const char* buffer, size_t length) {
+   TFLITE_DCHECK(context->AllocatePersistentBuffer != nullptr);
+   return context->AllocatePersistentBuffer(context, sizeof(OpDataPooling));
+@@ -98,6 +98,7 @@ void* PoolInit(TfLiteContext* context, const char* buffer, size_t length) {
+ 
+ }  // namespace
+ 
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_AVERAGE_POOL_2D() {
+   return tflite::micro::RegisterOp(PoolInit, PoolingPrepare, AverageEval);
+ }
+@@ -105,5 +106,6 @@ TFLMRegistration Register_AVERAGE_POOL_2D() {
+ TFLMRegistration Register_MAX_POOL_2D() {
+   return tflite::micro::RegisterOp(PoolInit, PoolingPrepare, MaxEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/pooling.h b/tensorflow/lite/micro/kernels/pooling.h
+index a87e22c3..8c4d9328 100644
+--- a/tensorflow/lite/micro/kernels/pooling.h
++++ b/tensorflow/lite/micro/kernels/pooling.h
+@@ -29,6 +29,12 @@ limitations under the License.
+ #include "tensorflow/lite/micro/kernels/micro_ops.h"
+ #include "tensorflow/lite/micro/micro_log.h"
+ 
++#ifdef TFLITE_MICRO_RECORDER_ENABLED
++#include "tflite_micro_recorder.hpp"
++#else
++#define NPU_TOOLKIT_RECORD_POOL_PARAMS(...)
++#endif
++
+ namespace tflite {
+ 
+ extern const int kPoolingInputTensor;
+@@ -75,6 +81,9 @@ void AveragePoolingEvalQuantized(TfLiteContext* context, const TfLiteNode* node,
+   op_params.quantized_activation_min = data->activation_min;
+   op_params.quantized_activation_max = data->activation_max;
+ 
++  op_params.padding_type = tflite::micro::RuntimePaddingType(params->padding);
++  NPU_TOOLKIT_RECORD_POOL_PARAMS(op_params);
++
+   reference_integer_ops::AveragePool(op_params,
+                                      tflite::micro::GetTensorShape(input),
+                                      tflite::micro::GetTensorData<T>(input),
+@@ -105,6 +114,9 @@ void MaxPoolingEvalQuantized(TfLiteContext* context, TfLiteNode* node,
+   op_params.quantized_activation_min = data->activation_min;
+   op_params.quantized_activation_max = data->activation_max;
+ 
++  op_params.padding_type = tflite::micro::RuntimePaddingType(params->padding);
++  NPU_TOOLKIT_RECORD_POOL_PARAMS(op_params);
++
+   reference_integer_ops::MaxPool(op_params,
+                                  tflite::micro::GetTensorShape(input),
+                                  tflite::micro::GetTensorData<T>(input),
+diff --git a/tensorflow/lite/micro/kernels/reduce.cc b/tensorflow/lite/micro/kernels/reduce.cc
+index a689d3b9..18bed184 100644
+--- a/tensorflow/lite/micro/kernels/reduce.cc
++++ b/tensorflow/lite/micro/kernels/reduce.cc
+@@ -59,9 +59,11 @@ TfLiteStatus EvalSum(TfLiteContext* context, TfLiteNode* node) {
+                        static_cast<OpDataReduce*>(node->user_data));
+ }
+ 
++#if !defined(TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED) && !defined(TFLITE_MICRO_SW_REF_KERNEL_MEAN_REGISTRATION_DISABLED)
+ TFLMRegistration Register_MEAN() {
+   return tflite::micro::RegisterOp(InitReduce, PrepareMeanOrSum, EvalMean);
+ }
++#endif
+ 
+ TFLMRegistration Register_REDUCE_MAX() {
+   return tflite::micro::RegisterOp(InitReduce, PrepareMax, EvalMax);
+diff --git a/tensorflow/lite/micro/kernels/softmax.cc b/tensorflow/lite/micro/kernels/softmax.cc
+index b154ecba..2e1b75f8 100644
+--- a/tensorflow/lite/micro/kernels/softmax.cc
++++ b/tensorflow/lite/micro/kernels/softmax.cc
+@@ -54,6 +54,8 @@ void SoftmaxQuantized(const TfLiteEvalTensor* input, TfLiteEvalTensor* output,
+   }
+ }
+ 
++}  // namespace
++
+ TfLiteStatus SoftmaxEval(TfLiteContext* context, TfLiteNode* node) {
+   const TfLiteEvalTensor* input = tflite::micro::GetEvalInput(context, node, 0);
+   TfLiteEvalTensor* output = tflite::micro::GetEvalOutput(context, node, 0);
+@@ -81,10 +83,12 @@ TfLiteStatus SoftmaxEval(TfLiteContext* context, TfLiteNode* node) {
+       return kTfLiteError;
+   }
+ }
+-}  // namespace
+ 
++
++
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_SOFTMAX() {
+   return tflite::micro::RegisterOp(SoftmaxInit, SoftmaxPrepare, SoftmaxEval);
+ }
+-
++#endif
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/kernels/transpose_conv.cc b/tensorflow/lite/micro/kernels/transpose_conv.cc
+index 715b4759..dc012186 100644
+--- a/tensorflow/lite/micro/kernels/transpose_conv.cc
++++ b/tensorflow/lite/micro/kernels/transpose_conv.cc
+@@ -143,6 +143,8 @@ TfLiteStatus CalculateOpData(TfLiteContext* context, TfLiteNode* node,
+   return kTfLiteOk;
+ }
+ 
++}  // namespace
++
+ void* TransposeConvInit(TfLiteContext* context, const char* buffer,
+                         size_t length) {
+   TFLITE_DCHECK(context->AllocatePersistentBuffer != nullptr);
+@@ -405,11 +407,13 @@ TfLiteStatus TransposeConvEval(TfLiteContext* context, TfLiteNode* node) {
+   return kTfLiteOk;
+ }
+ 
+-}  // namespace
+ 
++
++#ifndef TFLITE_MICRO_SW_REF_KERNEL_REGISTRATIONS_DISABLED
+ TFLMRegistration Register_TRANSPOSE_CONV() {
+   return tflite::micro::RegisterOp(TransposeConvInit, TransposeConvPrepare,
+                                    TransposeConvEval);
+ }
++#endif
+ 
+ }  // namespace tflite
+diff --git a/tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc b/tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc
+index 62099308..d2b057e8 100644
+--- a/tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc
++++ b/tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc
+@@ -16,6 +16,8 @@ limitations under the License.
+ #include "tensorflow/lite/micro/memory_planner/greedy_memory_planner.h"
+ 
+ #include "tensorflow/lite/micro/micro_log.h"
++#include "tensorflow/lite/micro/memory_helpers.h"
++#include "tensorflow/lite/micro/micro_arena_constants.h"
+ 
+ namespace tflite {
+ 
+@@ -239,7 +241,7 @@ void GreedyMemoryPlanner::CalculateOffsetsIfNeeded() {
+           BufferRequirements* candidate_requirements =
+               &requirements_[prior_entry->requirements_index];
+           const int prior_entry_offset =
+-              prior_entry->offset + candidate_requirements->size;
++              prior_entry->offset + AlignSizeUp(candidate_requirements->size, MicroArenaBufferAlignment());
+           if (prior_entry_offset > candidate_offset) {
+             candidate_offset = prior_entry_offset;
+           }
+diff --git a/tensorflow/lite/micro/memory_planner/greedy_memory_planner.h b/tensorflow/lite/micro/memory_planner/greedy_memory_planner.h
+index b2cdb617..7316146e 100644
+--- a/tensorflow/lite/micro/memory_planner/greedy_memory_planner.h
++++ b/tensorflow/lite/micro/memory_planner/greedy_memory_planner.h
+@@ -112,7 +112,7 @@ class GreedyMemoryPlanner : public MicroMemoryPlanner {
+   // that aren't being used during a phase of invocation are overwritten.
+   bool preserves_all_tensors() const override { return false; }
+ 
+- private:
++  public:
+   // Whether a buffer is active in a given time range.
+   bool DoesEntryOverlapInTime(const ListEntry* entry, const int first_time_used,
+                               const int last_time_used) const;
+diff --git a/tensorflow/lite/micro/micro_allocation_info.h b/tensorflow/lite/micro/micro_allocation_info.h
+index c0c7bd5e..e6ef4365 100644
+--- a/tensorflow/lite/micro/micro_allocation_info.h
++++ b/tensorflow/lite/micro/micro_allocation_info.h
+@@ -110,7 +110,6 @@ class AllocationInfoBuilder {
+   // Returns a pointer to the built AllocationInfo array.
+   AllocationInfo* Finish() const { return info_.allocation_info; }
+ 
+- private:
+   // Mark the given Allocation info as first created at the specified allocation
+   // scope count. Only the first creation must be recorded since the allocation
+   // scope count monotonically increases throughout the lifetime marking
+diff --git a/tensorflow/lite/micro/micro_allocator.cc b/tensorflow/lite/micro/micro_allocator.cc
+index eee24eb1..74aed315 100644
+--- a/tensorflow/lite/micro/micro_allocator.cc
++++ b/tensorflow/lite/micro/micro_allocator.cc
+@@ -36,6 +36,12 @@ limitations under the License.
+ #include "tensorflow/lite/micro/tflite_bridge/flatbuffer_conversions_bridge.h"
+ #include "tensorflow/lite/schema/schema_generated.h"
+ 
++#ifdef TFLITE_MICRO_RECORDER_ENABLED
++#include "tflite_micro_recorder.hpp"
++#else
++#define NPU_TOOLKIT_RECORD_MEMORY_PLAN(...)
++#endif
++
+ #ifdef USE_TFLM_COMPRESSION
+ 
+ #include <algorithm>
+@@ -802,6 +808,9 @@ TfLiteTensor* MicroAllocator::AllocatePersistentTfLiteTensor(
+   // This value is allocated from persistent arena space. It is guaranteed to be
+   // around for the lifetime of the application.
+   TfLiteTensor* tensor = AllocatePersistentTfLiteTensorInternal();
++  if(tensor == nullptr){
++    return nullptr;
++  }
+ 
+   if (tensor == nullptr) {
+     MicroPrintf("Failed to allocate memory for persistent TfLiteTensor");
+@@ -836,7 +845,9 @@ TfLiteTensor* MicroAllocator::AllocatePersistentTfLiteTensor(
+ }
+ 
+ void MicroAllocator::DeallocateTempTfLiteTensor(TfLiteTensor* tensor) {
+-  TFLITE_DCHECK(tensor != nullptr);
++  if(tensor == nullptr) {
++    return;
++  }
+ 
+   if (tensor->quantization.type == kTfLiteAffineQuantization) {
+     TFLITE_DCHECK(tensor->quantization.params != nullptr);
+@@ -871,6 +882,10 @@ TfLiteTensor* MicroAllocator::AllocateTempTfLiteTensor(
+   TfLiteTensor* tensor = reinterpret_cast<TfLiteTensor*>(
+       non_persistent_buffer_allocator_->AllocateTemp(sizeof(TfLiteTensor),
+                                                      alignof(TfLiteTensor)));
++  if(tensor == nullptr)
++  {
++    return nullptr;
++  }
+ 
+   // Populate any fields from the flatbuffer, since this TfLiteTensor struct is
+   // allocated in the temp section of the arena, ensure that additional
+@@ -1174,6 +1189,13 @@ TfLiteStatus MicroAllocator::CommitStaticMemoryPlan(
+                  non_persistent_buffer_allocator_->GetOverlayMemoryAddress(),
+                  allocation_info, allocation_info_count));
+ 
++  NPU_TOOLKIT_RECORD_MEMORY_PLAN(
++    memory_planner_,
++    allocation_info,
++    allocation_info_count,
++    builder.info_.subgraph_offsets
++  );
++
+   // Reset all temp allocations used above:
+   builder.FreeAllocationInfo();
+   non_persistent_buffer_allocator_->DeallocateTemp(planner_arena);
+diff --git a/tensorflow/lite/micro/micro_allocator.h b/tensorflow/lite/micro/micro_allocator.h
+index 215bffc6..7f8efa85 100644
+--- a/tensorflow/lite/micro/micro_allocator.h
++++ b/tensorflow/lite/micro/micro_allocator.h
+@@ -259,7 +259,6 @@ class MicroAllocator {
+ 
+   TfLiteBridgeBuiltinDataAllocator* GetBuiltinDataAllocator();
+ 
+- protected:
+   MicroAllocator(SingleArenaBufferAllocator* memory_allocator,
+                  MicroMemoryPlanner* memory_planner);
+   MicroAllocator(IPersistentBufferAllocator* persistent_buffer_allocator,
+@@ -309,7 +308,6 @@ class MicroAllocator {
+                                                           int subgraph_idx,
+                                                           bool allocate_temp);
+ 
+- private:
+   // Commits a memory plan for all non-persistent buffer allocations in the
+   // 'head' section of the memory arena. The eval_tensors pointer is the list of
+   // pre-allocated TfLiteEvalTensor structs that will point to the buffers that
+@@ -335,6 +333,8 @@ class MicroAllocator {
+   // the head section.
+   internal::ScratchBufferRequest* GetScratchBufferRequests();
+ 
++  virtual void* allocate_planned_persistent_buffer(size_t size){ return nullptr; };
++
+   // A simple memory allocator that always allocate from the arena tail or head.
+   INonPersistentBufferAllocator* non_persistent_buffer_allocator_;
+   IPersistentBufferAllocator* persistent_buffer_allocator_;
+diff --git a/tensorflow/lite/micro/micro_context.h b/tensorflow/lite/micro/micro_context.h
+index 5b1ea9ca..8b9d8092 100644
+--- a/tensorflow/lite/micro/micro_context.h
++++ b/tensorflow/lite/micro/micro_context.h
+@@ -167,7 +167,6 @@ class MicroContext {
+     return nullptr;
+   }
+ 
+- private:
+   TF_LITE_REMOVE_VIRTUAL_DELETE
+ };
+ 
+diff --git a/tensorflow/lite/micro/micro_interpreter.cc b/tensorflow/lite/micro/micro_interpreter.cc
+index 666516c6..4f0e7679 100644
+--- a/tensorflow/lite/micro/micro_interpreter.cc
++++ b/tensorflow/lite/micro/micro_interpreter.cc
+@@ -104,6 +104,7 @@ void MicroInterpreter::Init(MicroProfilerInterface* profiler) {
+   initialization_status_ = kTfLiteOk;
+ }
+ 
++#if 0
+ TfLiteStatus MicroInterpreter::PrepareNodeAndRegistrationDataFromFlatbuffer() {
+   for (int subgraph_idx = 0; subgraph_idx < graph_.NumSubgraphs();
+        subgraph_idx++) {
+@@ -196,6 +197,7 @@ TfLiteStatus MicroInterpreter::PrepareNodeAndRegistrationDataFromFlatbuffer() {
+   }
+   return kTfLiteOk;
+ }
++#endif
+ 
+ TfLiteStatus MicroInterpreter::AllocateTensors() {
+   SubgraphAllocations* allocations = allocator_.StartModelAllocation(model_);
+diff --git a/tensorflow/lite/micro/micro_interpreter.h b/tensorflow/lite/micro/micro_interpreter.h
+index 4a03c3fe..40f78064 100644
+--- a/tensorflow/lite/micro/micro_interpreter.h
++++ b/tensorflow/lite/micro/micro_interpreter.h
+@@ -175,7 +175,7 @@ class MicroInterpreter {
+   const MicroAllocator& allocator() const { return allocator_; }
+   const TfLiteContext& context() const { return context_; }
+ 
+- private:
++ public:
+   // TODO(b/158263161): Consider switching to Create() function to enable better
+   // error reporting during initialization.
+   void Init(MicroProfilerInterface* profiler);
+diff --git a/tensorflow/lite/micro/micro_interpreter_context.cc b/tensorflow/lite/micro/micro_interpreter_context.cc
+index 38c6225b..40ff0157 100644
+--- a/tensorflow/lite/micro/micro_interpreter_context.cc
++++ b/tensorflow/lite/micro/micro_interpreter_context.cc
+@@ -112,6 +112,7 @@ void MicroInterpreterContext::SetScratchBufferHandles(
+ 
+ TfLiteStatus MicroInterpreterContext::set_external_context(
+     void* external_context_payload) {
++  #if 0 // The NPU Toolkit needs to be able to set the external context outside of these states
+   TFLITE_DCHECK(state_ == InterpreterState::kPrepare ||
+                 state_ == InterpreterState::kInvoke);
+   if (external_context_payload == nullptr ||
+@@ -121,6 +122,7 @@ TfLiteStatus MicroInterpreterContext::set_external_context(
+         external_context_payload, external_context_payload_);
+     return kTfLiteError;
+   }
++  #endif
+ 
+   external_context_payload_ = external_context_payload;
+   return kTfLiteOk;
+diff --git a/tensorflow/lite/micro/micro_mutable_op_resolver.h b/tensorflow/lite/micro/micro_mutable_op_resolver.h
+index f3f2080f..99eefa38 100644
+--- a/tensorflow/lite/micro/micro_mutable_op_resolver.h
++++ b/tensorflow/lite/micro/micro_mutable_op_resolver.h
+@@ -23,21 +23,21 @@ limitations under the License.
+ #include "tensorflow/lite/kernels/internal/compatibility.h"
+ #include "tensorflow/lite/kernels/op_macros.h"
+ #include "tensorflow/lite/micro/compatibility.h"
+-#include "tensorflow/lite/micro/kernels/add.h"
+-#include "tensorflow/lite/micro/kernels/batch_matmul.h"
+-#include "tensorflow/lite/micro/kernels/conv.h"
+-#include "tensorflow/lite/micro/kernels/depthwise_conv.h"
+-#include "tensorflow/lite/micro/kernels/ethosu.h"
+-#include "tensorflow/lite/micro/kernels/fully_connected.h"
+-#include "tensorflow/lite/micro/kernels/maximum_minimum.h"
++// #include "tensorflow/lite/micro/kernels/add.h"
++// #include "tensorflow/lite/micro/kernels/batch_matmul.h"
++// #include "tensorflow/lite/micro/kernels/conv.h"
++// #include "tensorflow/lite/micro/kernels/depthwise_conv.h"
++// #include "tensorflow/lite/micro/kernels/ethosu.h"
++// #include "tensorflow/lite/micro/kernels/fully_connected.h"
++// #include "tensorflow/lite/micro/kernels/maximum_minimum.h"
+ #include "tensorflow/lite/micro/kernels/micro_ops.h"
+-#include "tensorflow/lite/micro/kernels/mul.h"
+-#include "tensorflow/lite/micro/kernels/pooling.h"
+-#include "tensorflow/lite/micro/kernels/reduce.h"
+-#include "tensorflow/lite/micro/kernels/softmax.h"
+-#include "tensorflow/lite/micro/kernels/svdf.h"
+-#include "tensorflow/lite/micro/kernels/transpose_conv.h"
+-#include "tensorflow/lite/micro/kernels/unidirectional_sequence_lstm.h"
++// #include "tensorflow/lite/micro/kernels/mul.h"
++// #include "tensorflow/lite/micro/kernels/pooling.h"
++// #include "tensorflow/lite/micro/kernels/reduce.h"
++// #include "tensorflow/lite/micro/kernels/softmax.h"
++// #include "tensorflow/lite/micro/kernels/svdf.h"
++// #include "tensorflow/lite/micro/kernels/transpose_conv.h"
++//#include "tensorflow/lite/micro/kernels/unidirectional_sequence_lstm.h"
+ #include "tensorflow/lite/micro/micro_log.h"
+ #include "tensorflow/lite/micro/micro_op_resolver.h"
+ #include "tensorflow/lite/schema/schema_generated.h"
+@@ -183,9 +183,9 @@ class MicroMutableOpResolver : public MicroOpResolver {
+     return AddBuiltin(BuiltinOperator_CEIL, Register_CEIL(), ParseCeil);
+   }
+ 
+-  TfLiteStatus AddCircularBuffer() {
+-    return AddCustom("CIRCULAR_BUFFER", tflite::Register_CIRCULAR_BUFFER());
+-  }
++  // TfLiteStatus AddCircularBuffer() {
++  //   return AddCustom("CIRCULAR_BUFFER", tflite::Register_CIRCULAR_BUFFER());
++  // }
+ 
+   TfLiteStatus AddConcatenation() {
+     return AddBuiltin(BuiltinOperator_CONCATENATION, Register_CONCATENATION(),
+@@ -206,10 +206,10 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       ParseCumsum);
+   }
+ 
+-  TfLiteStatus AddDelay() {
+-    // TODO(b/286250473): change back name to "Delay" and remove namespace
+-    return AddCustom("SignalDelay", tflite::tflm_signal::Register_DELAY());
+-  }
++  // TfLiteStatus AddDelay() {
++  //   // TODO(b/286250473): change back name to "Delay" and remove namespace
++  //   return AddCustom("SignalDelay", tflite::tflm_signal::Register_DELAY());
++  // }
+ 
+   TfLiteStatus AddDepthToSpace() {
+     return AddBuiltin(BuiltinOperator_DEPTH_TO_SPACE,
+@@ -227,10 +227,10 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       ParseDequantize);
+   }
+ 
+-  TfLiteStatus AddDetectionPostprocess() {
+-    return AddCustom("TFLite_Detection_PostProcess",
+-                     tflite::Register_DETECTION_POSTPROCESS());
+-  }
++  // TfLiteStatus AddDetectionPostprocess() {
++  //   return AddCustom("TFLite_Detection_PostProcess",
++  //                    tflite::Register_DETECTION_POSTPROCESS());
++  // }
+ 
+   TfLiteStatus AddDiv() {
+     return AddBuiltin(BuiltinOperator_DIV, tflite::Register_DIV(), ParseDiv);
+@@ -241,10 +241,10 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       Register_EMBEDDING_LOOKUP(), ParseEmbeddingLookup);
+   }
+ 
+-  TfLiteStatus AddEnergy() {
+-    // TODO(b/286250473): change back name to "Energy" and remove namespace
+-    return AddCustom("SignalEnergy", tflite::tflm_signal::Register_ENERGY());
+-  }
++  // TfLiteStatus AddEnergy() {
++  //   // TODO(b/286250473): change back name to "Energy" and remove namespace
++  //   return AddCustom("SignalEnergy", tflite::tflm_signal::Register_ENERGY());
++  // }
+ 
+   TfLiteStatus AddElu() {
+     return AddBuiltin(BuiltinOperator_ELU, tflite::Register_ELU(), ParseElu);
+@@ -254,13 +254,13 @@ class MicroMutableOpResolver : public MicroOpResolver {
+     return AddBuiltin(BuiltinOperator_EQUAL, Register_EQUAL(), ParseEqual);
+   }
+ 
+-  TfLiteStatus AddEthosU() {
+-    TFLMRegistration* registration = tflite::Register_ETHOSU();
+-    if (registration) {
+-      return AddCustom(tflite::GetString_ETHOSU(), registration);
+-    }
+-    return kTfLiteOk;
+-  }
++  // TfLiteStatus AddEthosU() {
++  //   TFLMRegistration* registration = tflite::Register_ETHOSU();
++  //   if (registration) {
++  //     return AddCustom(tflite::GetString_ETHOSU(), registration);
++  //   }
++  //   return kTfLiteOk;
++  // }
+ 
+   TfLiteStatus AddExp() {
+     return AddBuiltin(BuiltinOperator_EXP, Register_EXP(), ParseExp);
+@@ -271,40 +271,40 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       ParseExpandDims);
+   }
+ 
+-  TfLiteStatus AddFftAutoScale() {
+-    // TODO(b/286250473): change back name and remove namespace
+-    return AddCustom("SignalFftAutoScale",
+-                     tflite::tflm_signal::Register_FFT_AUTO_SCALE());
+-  }
++  // TfLiteStatus AddFftAutoScale() {
++  //   // TODO(b/286250473): change back name and remove namespace
++  //   return AddCustom("SignalFftAutoScale",
++  //                    tflite::tflm_signal::Register_FFT_AUTO_SCALE());
++  // }
+ 
+   TfLiteStatus AddFill() {
+     return AddBuiltin(BuiltinOperator_FILL, tflite::Register_FILL(), ParseFill);
+   }
+ 
+-  TfLiteStatus AddFilterBank() {
+-    // TODO(b/286250473): change back name to "FilterBank" and remove namespace
+-    return AddCustom("SignalFilterBank",
+-                     tflite::tflm_signal::Register_FILTER_BANK());
+-  }
+-  TfLiteStatus AddFilterBankLog() {
+-    // TODO(b/286250473): change back name to "FilterBankLog" and remove
+-    // namespace
+-    return AddCustom("SignalFilterBankLog",
+-                     tflite::tflm_signal::Register_FILTER_BANK_LOG());
+-  }
+-  TfLiteStatus AddFilterBankSquareRoot() {
+-    // TODO(b/286250473): change back name to "FilterBankSquareRoot" and remove
+-    // namespace
+-    return AddCustom("SignalFilterBankSquareRoot",
+-                     tflite::tflm_signal::Register_FILTER_BANK_SQUARE_ROOT());
+-  }
+-  TfLiteStatus AddFilterBankSpectralSubtraction() {
+-    // TODO(b/286250473): change back name to "FilterBankSpectralSubtraction"
+-    // and remove namespace
+-    return AddCustom(
+-        "SignalFilterBankSpectralSubtraction",
+-        tflite::tflm_signal::Register_FILTER_BANK_SPECTRAL_SUBTRACTION());
+-  }
++  // TfLiteStatus AddFilterBank() {
++  //   // TODO(b/286250473): change back name to "FilterBank" and remove namespace
++  //   return AddCustom("SignalFilterBank",
++  //                    tflite::tflm_signal::Register_FILTER_BANK());
++  // }
++  // TfLiteStatus AddFilterBankLog() {
++  //   // TODO(b/286250473): change back name to "FilterBankLog" and remove
++  //   // namespace
++  //   return AddCustom("SignalFilterBankLog",
++  //                    tflite::tflm_signal::Register_FILTER_BANK_LOG());
++  // }
++  // TfLiteStatus AddFilterBankSquareRoot() {
++  //   // TODO(b/286250473): change back name to "FilterBankSquareRoot" and remove
++  //   // namespace
++  //   return AddCustom("SignalFilterBankSquareRoot",
++  //                    tflite::tflm_signal::Register_FILTER_BANK_SQUARE_ROOT());
++  // }
++  // TfLiteStatus AddFilterBankSpectralSubtraction() {
++  //   // TODO(b/286250473): change back name to "FilterBankSpectralSubtraction"
++  //   // and remove namespace
++  //   return AddCustom(
++  //       "SignalFilterBankSpectralSubtraction",
++  //       tflite::tflm_signal::Register_FILTER_BANK_SPECTRAL_SUBTRACTION());
++  // }
+ 
+   TfLiteStatus AddFloor() {
+     return AddBuiltin(BuiltinOperator_FLOOR, Register_FLOOR(), ParseFloor);
+@@ -320,10 +320,10 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       ParseFloorMod);
+   }
+ 
+-  TfLiteStatus AddFramer() {
+-    // TODO(b/286250473): change back name to "Framer" and remove namespace
+-    return AddCustom("SignalFramer", tflite::tflm_signal::Register_FRAMER());
+-  }
++  // TfLiteStatus AddFramer() {
++  //   // TODO(b/286250473): change back name to "Framer" and remove namespace
++  //   return AddCustom("SignalFramer", tflite::tflm_signal::Register_FRAMER());
++  // }
+ 
+   TfLiteStatus AddFullyConnected(
+       const TFLMRegistration& registration = Register_FULLY_CONNECTED()) {
+@@ -360,11 +360,11 @@ class MicroMutableOpResolver : public MicroOpResolver {
+     return AddBuiltin(BuiltinOperator_IF, tflite::Register_IF(), ParseIf);
+   }
+ 
+-  TfLiteStatus AddIrfft(const TFLMRegistration* registration =
+-                            tflite::tflm_signal::Register_IRFFT()) {
+-    // TODO(b/286250473): change back name and remove namespace
+-    return AddCustom("SignalIrfft", registration);
+-  }
++  // TfLiteStatus AddIrfft(const TFLMRegistration* registration =
++  //                           tflite::tflm_signal::Register_IRFFT()) {
++  //   // TODO(b/286250473): change back name and remove namespace
++  //   return AddCustom("SignalIrfft", registration);
++  // }
+ 
+   TfLiteStatus AddL2Normalization() {
+     return AddBuiltin(BuiltinOperator_L2_NORMALIZATION,
+@@ -456,12 +456,12 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       ParseNotEqual);
+   }
+ 
+-  TfLiteStatus AddOverlapAdd() {
+-    // TODO(b/286250473): change back name to "OverlapAdd" and remove
+-    // namespace
+-    return AddCustom("SignalOverlapAdd",
+-                     tflite::tflm_signal::Register_OVERLAP_ADD());
+-  }
++  // TfLiteStatus AddOverlapAdd() {
++  //   // TODO(b/286250473): change back name to "OverlapAdd" and remove
++  //   // namespace
++  //   return AddCustom("SignalOverlapAdd",
++  //                    tflite::tflm_signal::Register_OVERLAP_ADD());
++  // }
+ 
+   TfLiteStatus AddPack() {
+     return AddBuiltin(BuiltinOperator_PACK, Register_PACK(), ParsePack);
+@@ -475,10 +475,10 @@ class MicroMutableOpResolver : public MicroOpResolver {
+     return AddBuiltin(BuiltinOperator_PADV2, Register_PADV2(), ParsePadV2);
+   }
+ 
+-  TfLiteStatus AddPCAN() {
+-    // TODO(b/286250473): change back name to "PCAN" and remove namespace
+-    return AddCustom("SignalPCAN", tflite::tflm_signal::Register_PCAN());
+-  }
++  // TfLiteStatus AddPCAN() {
++  //   // TODO(b/286250473): change back name to "PCAN" and remove namespace
++  //   return AddCustom("SignalPCAN", tflite::tflm_signal::Register_PCAN());
++  // }
+ 
+   TfLiteStatus AddPrelu() {
+     return AddBuiltin(BuiltinOperator_PRELU, tflite::Register_PRELU(),
+@@ -525,11 +525,11 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       ParseResizeNearestNeighbor);
+   }
+ 
+-  TfLiteStatus AddRfft(const TFLMRegistration* registration =
+-                           tflite::tflm_signal::Register_RFFT()) {
+-    // TODO(b/286250473): change back name and remove namespace
+-    return AddCustom("SignalRfft", registration);
+-  }
++  // TfLiteStatus AddRfft(const TFLMRegistration* registration =
++  //                          tflite::tflm_signal::Register_RFFT()) {
++  //   // TODO(b/286250473): change back name and remove namespace
++  //   return AddCustom("SignalRfft", registration);
++  // }
+ 
+   TfLiteStatus AddRound() {
+     return AddBuiltin(BuiltinOperator_ROUND, Register_ROUND(), ParseRound);
+@@ -603,10 +603,10 @@ class MicroMutableOpResolver : public MicroOpResolver {
+                       ParseStridedSlice);
+   }
+ 
+-  TfLiteStatus AddStacker() {
+-    // TODO(b/286250473): change back name to "Stacker" and remove namespace
+-    return AddCustom("SignalStacker", tflite::tflm_signal::Register_STACKER());
+-  }
++  // TfLiteStatus AddStacker() {
++  //   // TODO(b/286250473): change back name to "Stacker" and remove namespace
++  //   return AddCustom("SignalStacker", tflite::tflm_signal::Register_STACKER());
++  // }
+ 
+   TfLiteStatus AddSub() {
+     return AddBuiltin(BuiltinOperator_SUB, tflite::Register_SUB(), ParseSub);
+@@ -655,10 +655,10 @@ class MicroMutableOpResolver : public MicroOpResolver {
+     return AddBuiltin(BuiltinOperator_WHILE, Register_WHILE(), ParseWhile);
+   }
+ 
+-  TfLiteStatus AddWindow() {
+-    // TODO(b/286250473): change back name to "Window" and remove namespace
+-    return AddCustom("SignalWindow", tflite::tflm_signal::Register_WINDOW());
+-  }
++  // TfLiteStatus AddWindow() {
++  //   // TODO(b/286250473): change back name to "Window" and remove namespace
++  //   return AddCustom("SignalWindow", tflite::tflm_signal::Register_WINDOW());
++  // }
+ 
+   TfLiteStatus AddZerosLike() {
+     return AddBuiltin(BuiltinOperator_ZEROS_LIKE, Register_ZEROS_LIKE(),
+diff --git a/tensorflow/lite/micro/test_helpers.h b/tensorflow/lite/micro/test_helpers.h
+index 86eaf778..24210520 100644
+--- a/tensorflow/lite/micro/test_helpers.h
++++ b/tensorflow/lite/micro/test_helpers.h
+@@ -24,6 +24,7 @@ limitations under the License.
+ 
+ #include "flatbuffers/flatbuffers.h"  // from @flatbuffers
+ #include "tensorflow/lite/c/common.h"
++#include "tensorflow/lite/kernels/kernel_util.h"
+ #include "tensorflow/lite/kernels/internal/compatibility.h"
+ #include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
+ #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"

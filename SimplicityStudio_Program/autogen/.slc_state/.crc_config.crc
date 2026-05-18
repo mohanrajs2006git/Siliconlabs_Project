@@ -1,0 +1,20 @@
+#CRC Codes for initially generated config files -- do not modify!
+FreeRTOSConfig.h=-1771758151
+RTE_Device_917.h=748820790
+pin_config.h=1450675604
+sl_board_configuration.h=-559764842
+sl_board_control.h=1349580067
+sl_core_config.h=-119586893
+sl_gpio_board.h=-1265080859
+sl_ml_audio_feature_generation_config_si91x.h=-1691977655
+sl_si91x_dma_config.h=-1624331129
+sl_si91x_i2s_config.h=-795802277
+sl_si91x_i2s_init_i2s0_config.h=-1325629026
+sl_si91x_rgb_led_config.h=-1593710096
+sl_si91x_rgb_led_init_led0_config.h=-1880210366
+sl_si91x_sleep_timer_clock_sel.h=1546602859
+sl_si91x_stack_size_config.h=1151736032
+sl_si91x_ulp_uart_common_config.h=-1135671159
+sl_si91x_ulp_uart_config.h=-1499638611
+sl_sleeptimer_config.h=1360009810
+tflite/keyword_spotting_on_off_v3.tflite=-1442941077

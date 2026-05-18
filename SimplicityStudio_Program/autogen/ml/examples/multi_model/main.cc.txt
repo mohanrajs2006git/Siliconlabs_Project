@@ -1,0 +1,145 @@
+/**
+ * This demonstrates how to compiled and execute multiple .tflite models
+ * at the same time.
+ *
+ * Refer to the corresponding README for more details.
+ */
+
+// Include the SDK headers
+#include "sl_system_init.h"
+
+// This is an optional header
+// that demonstrates how to manually configure the system clocks
+#include "ml/platform/ml_clock_helper.h"
+
+// Include your compiled model
+// Change "image_classification" to your model's name (if necessary)
+#include "keyword_spotting_generated.h"
+#include "keyword_spotting_generated.h"
+
+// To keep things simple,
+// we globally use the "npu_toolkit" C++ namespace.
+// This way, we do not have to manually use it
+// for every call.
+using namespace npu_toolkit;
+
+
+
+int main()
+{
+  // Initialize the system
+  sl_system_init();
+
+  // This is optional,
+  // but may be used to configure the platform's max clock rate
+  ml_configure_clocks_to_max_rate();
+
+  // Define a TfliteMicroModel instance
+  // This allows for executing the compiled model.
+  // NOTE: This effectively wraps the Tensorflow-Lite Micro Interpreter.
+  TfliteMicroModel image_classification_model;
+  TfliteMicroModel keyword_spotting_model;
+
+  // Obtain a reference to the logger used by the TfliteMicroModel lib
+  auto& logger = get_logger();
+
+  logger.info("Multi-model example starting ...");
+
+  // Enable the profiler BEFORE loading the model
+  image_classification_model.set_profiler_enabled(true);
+  keyword_spotting_model.set_profiler_enabled(true);
+
+
+  // Load the compiled .tflite model
+  // with the given TfliteMicroModel instance
+  logger.info("Loading image_classification model");
+  if(!image_classification::load_tflite_micro_model(image_classification_model))
+  {
+    logger.error("Failed to load image classification model");
+    for(;;);
+  }
+
+  logger.info("Loading keyword_spotting model");
+  if(!keyword_spotting::load_tflite_micro_model(keyword_spotting_model))
+  {
+    logger.error("Failed to load keyword_spotting model");
+    for(;;);
+  }
+
+  // Print the model metrics
+  logger.info("image_classification model metrics:");
+  auto image_classification_profiler = image_classification_model.root_profiler();
+  profiling::print_metrics(
+      image_classification_profiler,
+      &logger,
+      TfliteMicroModel::profiling_metrics_callback,
+      &image_classification_model
+  );
+
+  logger.info("keyword_spotting model metrics:");
+  auto keyword_spotting_profiler = keyword_spotting_model.root_profiler();
+  profiling::print_metrics(
+      keyword_spotting_profiler,
+      &logger,
+      TfliteMicroModel::profiling_metrics_callback,
+      &keyword_spotting_model
+  );
+
+  // Populate the model input tensor
+  // Typically, this is when you would write
+  // your sensor data (e.g. image, audio, accelerometer, etc.)
+  // For this example, we just set them to 0
+  for(unsigned i = 0; i < image_classification_model.n_inputs(); ++i)
+  {
+    auto& input_tensor = *image_classification_model.input(i);
+    memset(input_tensor.data.raw, 0, input_tensor.bytes);
+  }
+
+  for(unsigned i = 0; i < keyword_spotting_model.n_inputs(); ++i)
+  {
+    auto& input_tensor = *keyword_spotting_model.input(i);
+    memset(input_tensor.data.raw, 0, input_tensor.bytes);
+  }
+
+
+  // Invoke the image_classification_model
+  // This will cause the ML model to execute on the accelerator
+  // The model's output tensors will contain the results
+  if(!image_classification_model.invoke())
+  {
+    logger.error("Failed to invoke image_classification_model");
+    for(;;);
+  }
+
+  if(!keyword_spotting_model.invoke())
+  {
+    logger.error("Failed to invoke keyword_spotting_model");
+    for(;;);
+  }
+
+  // For this example, we just print a summary of the output tensor(s)
+  logger.info("image_classification_model output tensor(s):");
+  for(unsigned i = 0; i < image_classification_model.n_outputs(); ++i)
+  {
+    auto& output_tensor = *image_classification_model.output(i);
+    logger.info("  [%d] %s\n", i, output_tensor.to_str());
+  }
+
+  logger.info("keyword_spotting_model output tensor(s):");
+  for(unsigned i = 0; i < keyword_spotting_model.n_outputs(); ++i)
+  {
+    auto& output_tensor = *keyword_spotting_model.output(i);
+    logger.info("  [%d] %s\n", i, output_tensor.to_str());
+  }
+
+  // Print the profiling results
+  logger.info("image_classification model profiling results:");
+  profiling::print_stats(image_classification_profiler, &logger);
+
+  logger.info("keyword_spotting model profiling results:");
+  profiling::print_stats(keyword_spotting_profiler, &logger);
+
+  logger.info("Done");
+
+  return 0;
+}

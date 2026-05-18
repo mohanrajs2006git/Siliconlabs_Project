@@ -1,0 +1,29 @@
+# Build folders
+GNU ARM v12.2.1 - Default/
+SimplicityStudio_Program/GNU ARM v12.2.1 - Default/
+
+# Object files
+*.o
+*.d
+
+# Binary outputs
+*.axf
+*.bin
+*.hex
+*.map
+*.out
+*.s37
+*.rps
+
+# Logs
+*.log
+
+# Temp
+*.tmp
+*.temp
+
+# VSCode
+.vscode/
+
+# Eclipse/Simplicity cache
+.metadata/

@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="uc.module.setup.apack_mvp_compiler.com.silabs.ss.framework.project.toolchain.core.default#com.silabs.ss.tool.ide.arm.toolchain.gnu.cdt:12.2.1.20221205.gcc" propertyScope="project">
+  <folder name="autogen">
+    <folder name="ml">
+      <folder name="accelerator">
+        <folder name="mvpv1">
+          <file name="add.hpp" builtin="true" generated="true"/>
+          <file name="add_compiled.cc" builtin="true" generated="true"/>
+          <file name="add_registration.cc" builtin="true" generated="true"/>
+          <file name="conv2d.hpp" builtin="true" generated="true"/>
+          <file name="conv2d_compiled.cc" builtin="true" generated="true"/>
+          <file name="conv2d_registration.cc" builtin="true" generated="true"/>
+          <file name="depthwise_conv2d.hpp" builtin="true" generated="true"/>
+          <file name="depthwise_conv2d_compiled.cc" builtin="true" generated="true"/>
+          <file name="depthwise_conv2d_registration.cc" builtin="true" generated="true"/>
+          <file name="fully_connected.hpp" builtin="true" generated="true"/>
+          <file name="fully_connected_compiled.cc" builtin="true" generated="true"/>
+          <file name="fully_connected_registration.cc" builtin="true" generated="true"/>
+          <file name="mvpv1_accelerator_utils.cc" builtin="true" generated="true"/>
+          <file name="mvpv1_accelerator_utils.hpp" builtin="true" generated="true"/>
+          <file name="mvpv1_compiled_kernel_executor.cc" builtin="true" generated="true"/>
+          <file name="mvpv1_helpers.cc" builtin="true" generated="true"/>
+          <file name="mvpv1_helpers.h" builtin="true" generated="true"/>
+          <file name="mvpv1_kernel_config.hpp" builtin="true" generated="true"/>
+          <file name="mvpv1_kernel_debug.hpp" builtin="true" generated="true"/>
+          <file name="mvpv1_kernel_registration_helper.cc" builtin="true" generated="true"/>
+          <file name="mvpv1_kernel_registration_helper.hpp" builtin="true" generated="true"/>
+          <file name="mvpv1_kernel_utils.cc" builtin="true" generated="true"/>
+          <file name="mvpv1_kernel_utils.hpp" builtin="true" generated="true"/>
+          <file name="mvpv1_program_recorder.hpp" builtin="true" generated="true"/>
+          <file name="pooling2d.hpp" builtin="true" generated="true"/>
+          <file name="pooling2d_compiled.cc" builtin="true" generated="true"/>
+          <file name="pooling2d_registration.cc" builtin="true" generated="true"/>
+          <file name="softmax_registration.cc" builtin="true" generated="true"/>
+          <file name="tflite_micro_mvpv1_accelerator.cc" builtin="true" generated="true"/>
+          <file name="tflite_micro_mvpv1_accelerator.hpp" builtin="true" generated="true"/>
+          <file name="tflite_micro_mvpv1_accelerator_profiler.cc" builtin="true" generated="true"/>
+          <file name="tflite_micro_mvpv1_accelerator_registration.cc" builtin="true" generated="true"/>
+          <file name="tflite_micro_mvpv1_context.cc" builtin="true" generated="true"/>
+          <file name="tflite_micro_mvpv1_context.hpp" builtin="true" generated="true"/>
+        </folder>
+      </folder>
+      <folder name="compiled_model">
+        <file name="compiled_model.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_cache.cc" builtin="true" generated="true"/>
+        <file name="compiled_model_cache.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_cache_debug.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_cache_interface.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_context.cc" builtin="true" generated="true"/>
+        <file name="compiled_model_context.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_data_manager.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_dma_manager.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_interface.hpp" builtin="true" generated="true"/>
+        <file name="compiled_model_utils.cc" builtin="true" generated="true"/>
+        <file name="dma_manager.cc" builtin="true" generated="true"/>
+      </folder>
+      <folder name="examples">
+        <folder name="basic">
+          <file name="main.cc.txt" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+        <folder name="logging">
+          <file name="main.cc.txt" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+        <folder name="multi_model">
+          <file name="main.cc.txt" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+        <folder name="parameters">
+          <file name="main.cc.txt" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+          <file name="update_model_parameters.py" builtin="true" generated="true"/>
+        </folder>
+        <folder name="profiling">
+          <file name="main.cc.txt" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+        <folder name="recording">
+          <file name="main.cc.txt" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+      </folder>
+      <folder name="platform">
+        <folder name="si91x">
+          <file name="ml_clock_helper.c" builtin="true" generated="true"/>
+          <file name="si91x_dma_manager.cc" builtin="true" generated="true"/>
+        </folder>
+        <file name="microsecond_timer.c" builtin="true" generated="true"/>
+        <file name="microsecond_timer.h" builtin="true" generated="true"/>
+        <file name="ml_clock_helper.h" builtin="true" generated="true"/>
+      </folder>
+      <folder name="tflite_micro_model">
+        <file name="compiled_memory_plan_interface.hpp" builtin="true" generated="true"/>
+        <file name="dictionary_generated.h" builtin="true" generated="true"/>
+        <file name="tflite_micro_accelerator.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_accelerator.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_compiled_allocator.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_compiled_allocator.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_logger.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_logger.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_model-attributes.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_model-callbacks.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_model-load.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_model.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_model_context.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_model_context.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_model_helper.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_model_helper.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_model_status.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_model_status.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_model_types.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_profiler.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_profiler.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_profiler_metrics.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_tensor.cc" builtin="true" generated="true"/>
+        <file name="tflite_micro_tensor.hpp" builtin="true" generated="true"/>
+        <file name="tflite_micro_utils.hpp" builtin="true" generated="true"/>
+        <file name="tflite_model_parameters.cc" builtin="true" generated="true"/>
+        <file name="tflite_model_parameters.hpp" builtin="true" generated="true"/>
+      </folder>
+      <folder name="third_party">
+        <folder name="cmsis_nn">
+          <file name="arm_nnfunctions.h" builtin="true" generated="true"/>
+          <file name="arm_nnsupportfunctions.h" builtin="true" generated="true"/>
+          <file name="arm_nn_compiler.h" builtin="true" generated="true"/>
+          <file name="arm_nn_math_types.h" builtin="true" generated="true"/>
+          <file name="arm_nn_mat_mult_nt_t_s16.c" builtin="true" generated="true"/>
+          <file name="arm_nn_mat_mult_nt_t_s4.c" builtin="true" generated="true"/>
+          <file name="arm_nn_mat_mult_nt_t_s8.c" builtin="true" generated="true"/>
+          <file name="arm_nn_softmax_common_s8.c" builtin="true" generated="true"/>
+          <file name="arm_nn_tables.h" builtin="true" generated="true"/>
+          <file name="arm_nn_types.h" builtin="true" generated="true"/>
+          <file name="arm_nn_vec_mat_mult_t_per_ch_s8.c" builtin="true" generated="true"/>
+          <file name="arm_nn_vec_mat_mult_t_s16.c" builtin="true" generated="true"/>
+          <file name="arm_nn_vec_mat_mult_t_s4.c" builtin="true" generated="true"/>
+          <file name="arm_nn_vec_mat_mult_t_s8.c" builtin="true" generated="true"/>
+          <file name="arm_q7_to_q15_with_offset.c" builtin="true" generated="true"/>
+          <file name="arm_s8_to_s16_unordered_with_offset.c" builtin="true" generated="true"/>
+          <file name="arm_softmax_s16.c" builtin="true" generated="true"/>
+          <file name="arm_softmax_s8.c" builtin="true" generated="true"/>
+          <file name="arm_softmax_s8_s16.c" builtin="true" generated="true"/>
+          <file name="LICENSE" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+        <folder name="flatbuffers">
+          <file name="allocator.hpp" builtin="true" generated="true"/>
+          <file name="array.hpp" builtin="true" generated="true"/>
+          <file name="base.hpp" builtin="true" generated="true"/>
+          <file name="buffer.hpp" builtin="true" generated="true"/>
+          <file name="buffer_ref.hpp" builtin="true" generated="true"/>
+          <file name="default_allocator.hpp" builtin="true" generated="true"/>
+          <file name="detached_buffer.hpp" builtin="true" generated="true"/>
+          <file name="flatbuffers.hpp" builtin="true" generated="true"/>
+          <file name="flatbuffer_builder.hpp" builtin="true" generated="true"/>
+          <file name="flexbuffers.hpp" builtin="true" generated="true"/>
+          <file name="LICENSE" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+          <file name="stl_emulation.hpp" builtin="true" generated="true"/>
+          <file name="string.hpp" builtin="true" generated="true"/>
+          <file name="struct.hpp" builtin="true" generated="true"/>
+          <file name="table.hpp" builtin="true" generated="true"/>
+          <file name="util.hpp" builtin="true" generated="true"/>
+          <file name="vector.hpp" builtin="true" generated="true"/>
+          <file name="vector_downward.hpp" builtin="true" generated="true"/>
+          <file name="verifier.hpp" builtin="true" generated="true"/>
+        </folder>
+        <folder name="float16">
+          <file name="float16.hpp" builtin="true" generated="true"/>
+        </folder>
+        <folder name="gemmlowp">
+          <file name="detect_platform.h" builtin="true" generated="true"/>
+          <file name="fixedpoint.h" builtin="true" generated="true"/>
+          <file name="LICENSE" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+        <folder name="ruy">
+          <file name="instrumentation.h" builtin="true" generated="true"/>
+          <file name="LICENSE" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+        </folder>
+        <folder name="tflm">
+          <file name="activation_utils.h" builtin="true" generated="true"/>
+          <file name="builtin_op_data.h" builtin="true" generated="true"/>
+          <file name="common.cc" builtin="true" generated="true"/>
+          <file name="common.h" builtin="true" generated="true"/>
+          <file name="compatibility.h" builtin="true" generated="true"/>
+          <file name="compatibility_macros.h" builtin="true" generated="true"/>
+          <file name="compression.h" builtin="true" generated="true"/>
+          <file name="context_util.h" builtin="true" generated="true"/>
+          <file name="cppmath.h" builtin="true" generated="true"/>
+          <file name="c_api_types.h" builtin="true" generated="true"/>
+          <file name="debug_log.h" builtin="true" generated="true"/>
+          <file name="decompress.h" builtin="true" generated="true"/>
+          <file name="error_reporter.cc" builtin="true" generated="true"/>
+          <file name="error_reporter.h" builtin="true" generated="true"/>
+          <file name="flatbuffer_conversions.cc" builtin="true" generated="true"/>
+          <file name="flatbuffer_conversions.h" builtin="true" generated="true"/>
+          <file name="flatbuffer_conversions_bridge.cc" builtin="true" generated="true"/>
+          <file name="flatbuffer_conversions_bridge.h" builtin="true" generated="true"/>
+          <file name="flatbuffer_utils.cc" builtin="true" generated="true"/>
+          <file name="flatbuffer_utils.h" builtin="true" generated="true"/>
+          <file name="greedy_memory_planner.h" builtin="true" generated="true"/>
+          <file name="ibuffer_allocator.h" builtin="true" generated="true"/>
+          <file name="kernel_util.cc" builtin="true" generated="true"/>
+          <file name="kernel_util.h" builtin="true" generated="true"/>
+          <file name="LICENSE" builtin="true" generated="true"/>
+          <file name="linear_memory_planner.h" builtin="true" generated="true"/>
+          <file name="macros.h" builtin="true" generated="true"/>
+          <file name="max.h" builtin="true" generated="true"/>
+          <file name="memory_helpers.cc" builtin="true" generated="true"/>
+          <file name="memory_helpers.h" builtin="true" generated="true"/>
+          <file name="memory_plan_struct.h" builtin="true" generated="true"/>
+          <file name="micro_allocation_info.cc" builtin="true" generated="true"/>
+          <file name="micro_allocation_info.h" builtin="true" generated="true"/>
+          <file name="micro_allocator.cc" builtin="true" generated="true"/>
+          <file name="micro_allocator.h" builtin="true" generated="true"/>
+          <file name="micro_arena_constants.h" builtin="true" generated="true"/>
+          <file name="micro_common.h" builtin="true" generated="true"/>
+          <file name="micro_context.cc" builtin="true" generated="true"/>
+          <file name="micro_context.h" builtin="true" generated="true"/>
+          <file name="micro_error_reporter.cc" builtin="true" generated="true"/>
+          <file name="micro_error_reporter.h" builtin="true" generated="true"/>
+          <file name="micro_graph.h" builtin="true" generated="true"/>
+          <file name="micro_interpreter.cc" builtin="true" generated="true"/>
+          <file name="micro_interpreter.h" builtin="true" generated="true"/>
+          <file name="micro_interpreter_context.cc" builtin="true" generated="true"/>
+          <file name="micro_interpreter_context.h" builtin="true" generated="true"/>
+          <file name="micro_interpreter_graph.cc" builtin="true" generated="true"/>
+          <file name="micro_interpreter_graph.h" builtin="true" generated="true"/>
+          <file name="micro_interpreter_override.cc" builtin="true" generated="true"/>
+          <file name="micro_log.cc" builtin="true" generated="true"/>
+          <file name="micro_log.h" builtin="true" generated="true"/>
+          <file name="micro_memory_planner.h" builtin="true" generated="true"/>
+          <file name="micro_mutable_op_resolver.h" builtin="true" generated="true"/>
+          <file name="micro_ops.h" builtin="true" generated="true"/>
+          <file name="micro_op_resolver.cc" builtin="true" generated="true"/>
+          <file name="micro_op_resolver.h" builtin="true" generated="true"/>
+          <file name="micro_profiler.h" builtin="true" generated="true"/>
+          <file name="micro_profiler_interface.h" builtin="true" generated="true"/>
+          <file name="micro_resource_variable.cc" builtin="true" generated="true"/>
+          <file name="micro_resource_variable.h" builtin="true" generated="true"/>
+          <file name="micro_utils.cc" builtin="true" generated="true"/>
+          <file name="micro_utils.h" builtin="true" generated="true"/>
+          <file name="min.h" builtin="true" generated="true"/>
+          <file name="neon_check.h" builtin="true" generated="true"/>
+          <file name="non_persistent_arena_buffer_allocator.h" builtin="true" generated="true"/>
+          <file name="non_persistent_buffer_planner_shim.h" builtin="true" generated="true"/>
+          <file name="op_macros.h" builtin="true" generated="true"/>
+          <file name="padding.h" builtin="true" generated="true"/>
+          <file name="persistent_arena_buffer_allocator.h" builtin="true" generated="true"/>
+          <file name="portable_tensor.h" builtin="true" generated="true"/>
+          <file name="portable_tensor_utils.cc" builtin="true" generated="true"/>
+          <file name="portable_tensor_utils.h" builtin="true" generated="true"/>
+          <file name="portable_type_to_tflitetype.h" builtin="true" generated="true"/>
+          <file name="process_broadcast_shapes.h" builtin="true" generated="true"/>
+          <file name="quantization_util.cc" builtin="true" generated="true"/>
+          <file name="quantization_util.h" builtin="true" generated="true"/>
+          <file name="README.md" builtin="true" generated="true"/>
+          <file name="reshape.cc" builtin="true" generated="true"/>
+          <file name="reshape.h" builtin="true" generated="true"/>
+          <file name="reshape_common.cc" builtin="true" generated="true"/>
+          <file name="runtime_shape.h" builtin="true" generated="true"/>
+          <file name="schema_generated.h" builtin="true" generated="true"/>
+          <file name="schema_utils.cc" builtin="true" generated="true"/>
+          <file name="schema_utils.h" builtin="true" generated="true"/>
+          <file name="single_arena_buffer_allocator.cc" builtin="true" generated="true"/>
+          <file name="single_arena_buffer_allocator.h" builtin="true" generated="true"/>
+          <file name="softmax.cc" builtin="true" generated="true"/>
+          <file name="softmax.h" builtin="true" generated="true"/>
+          <file name="softmax_common.cc" builtin="true" generated="true"/>
+          <file name="strided_slice_logic.h" builtin="true" generated="true"/>
+          <file name="tensor_ctypes.cc" builtin="true" generated="true"/>
+          <file name="tensor_ctypes.h" builtin="true" generated="true"/>
+          <file name="tflite_micro.patch" builtin="true" generated="true"/>
+          <file name="tflite_types.h" builtin="true" generated="true"/>
+          <file name="tlc-builtin_op_data.h" builtin="true" generated="true"/>
+          <file name="tlca-error_reporter.h" builtin="true" generated="true"/>
+          <file name="tlcc-builtin_op_data.h" builtin="true" generated="true"/>
+          <file name="tlcc-common.h" builtin="true" generated="true"/>
+          <file name="tlcc-c_api_types.h" builtin="true" generated="true"/>
+          <file name="tlki-common.cc" builtin="true" generated="true"/>
+          <file name="tlki-common.h" builtin="true" generated="true"/>
+          <file name="tlm-compatibility.h" builtin="true" generated="true"/>
+          <file name="tlmk-kernel_util.cc" builtin="true" generated="true"/>
+          <file name="tlmk-kernel_util.h" builtin="true" generated="true"/>
+          <file name="tlmk-softmax.h" builtin="true" generated="true"/>
+          <file name="tls-schema_generated.h" builtin="true" generated="true"/>
+          <file name="tls-schema_utils.h" builtin="true" generated="true"/>
+          <file name="types.h" builtin="true" generated="true"/>
+          <file name="version.h" builtin="true" generated="true"/>
+        </folder>
+      </folder>
+      <folder name="utils">
+        <file name="array_helper.hpp" builtin="true" generated="true"/>
+        <file name="default_writer.cc" builtin="true" generated="true"/>
+        <file name="flags_helper.hpp" builtin="true" generated="true"/>
+        <file name="helpers.hpp" builtin="true" generated="true"/>
+        <file name="list.cc" builtin="true" generated="true"/>
+        <file name="list.hpp" builtin="true" generated="true"/>
+        <file name="logging.cc" builtin="true" generated="true"/>
+        <file name="logging.hpp" builtin="true" generated="true"/>
+        <file name="memory_util.hpp" builtin="true" generated="true"/>
+        <file name="profiler.cc" builtin="true" generated="true"/>
+        <file name="profiler.hpp" builtin="true" generated="true"/>
+        <file name="profiler_fullname.cc" builtin="true" generated="true"/>
+        <file name="profiler_fullname.hpp" builtin="true" generated="true"/>
+        <file name="profiling.cc" builtin="true" generated="true"/>
+        <file name="profiling.hpp" builtin="true" generated="true"/>
+        <file name="string.cc" builtin="true" generated="true"/>
+        <file name="string.hpp" builtin="true" generated="true"/>
+        <file name="typed_list.hpp" builtin="true" generated="true"/>
+        <file name="vector_dict.hpp" builtin="true" generated="true"/>
+      </folder>
+    </folder>
+    <file name="compiler.log" builtin="true" generated="true"/>
+    <file name="keyword_spotting_generated.h" builtin="true" generated="true"/>
+    <file name="keyword_spotting_generated.parameters.h" builtin="true" generated="true"/>
+    <file name="sl_ml_model_keyword_spotting.h" builtin="true" generated="true"/>
+    <file name="tflite_micro_model.hpp" builtin="true" generated="true"/>
+    <file name="tflite_micro_model_config.h" builtin="true" generated="true"/>
+  </folder>
+  <includePath uri="studio:/project/autogen"/>
+  <includePath uri="studio:/project/autogen/ml/accelerator/mvpv1"/>
+  <includePath uri="studio:/project/autogen/ml/compiled_model"/>
+  <includePath uri="studio:/project/autogen/ml/examples/basic"/>
+  <includePath uri="studio:/project/autogen/ml/examples/logging"/>
+  <includePath uri="studio:/project/autogen/ml/examples/multi_model"/>
+  <includePath uri="studio:/project/autogen/ml/examples/parameters"/>
+  <includePath uri="studio:/project/autogen/ml/examples/profiling"/>
+  <includePath uri="studio:/project/autogen/ml/examples/recording"/>
+  <includePath uri="studio:/project/autogen/ml/platform"/>
+  <includePath uri="studio:/project/autogen/ml/platform/si91x"/>
+  <includePath uri="studio:/project/autogen/ml/tflite_micro_model"/>
+  <includePath uri="studio:/project/autogen/ml/third_party/cmsis_nn"/>
+  <includePath uri="studio:/project/autogen/ml/third_party/flatbuffers"/>
+  <includePath uri="studio:/project/autogen/ml/third_party/float16"/>
+  <includePath uri="studio:/project/autogen/ml/third_party/gemmlowp"/>
+  <includePath uri="studio:/project/autogen/ml/third_party/ruy"/>
+  <includePath uri="studio:/project/autogen/ml/third_party/tflm"/>
+  <includePath uri="studio:/project/autogen/ml/utils"/>
+</project>

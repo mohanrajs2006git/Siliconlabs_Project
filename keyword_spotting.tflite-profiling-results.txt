@@ -1,0 +1,82 @@
+Profiling Summary
+Name: keyword_spotting
+NPU Toolkit Version: 0.3.0
+Platform: simulator
+Accelerator: mvpv1
+Accelerator Variant: None
+Input Shape: 1x98x1x104
+Input Data Type: int8
+Output Shape: 1x9
+Output Data Type: int8
+Runtime buffer size (bytes): 42.2k
+Flash (bytes): 175.2k
+SRAM (bytes): 42.2k
+Operation Count: 4.9M
+Multiply-Accumulate Count: 2.4M
+Layer Count: 56.0
+Unsupported Layer Count: 0
+Accelerator Cycle Count: 1.6M
+MAC/cycle: 1.5
+Prepare Temp Memory Size: 36.5k
+
+Layer Summary
+.-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------.
+| Layer Index |      OpCode       | # Ops  | # MACs | # Acc Cycles |          Inputs          |  Outputs  |                              Options                              |
+|-------------|-------------------|--------|--------|--------------|--------------------------|-----------|-------------------------------------------------------------------|
+| 0           | conv_2d           | 1.5M   | 733.8k | 379.0k       | 1x98x1x104,24x3x1x104,24 | 1x98x1x24 | Padding:Same stride:1x1 activation:None                           |
+| 1           | conv_2d           | 359.9k | 169.3k | 114.1k       | 1x98x1x24,72x1x1x24,72   | 1x98x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 2           | depthwise_conv_2d | 74.1k  | 31.8k  | 51.8k        | 1x98x1x72,1x9x1x72,72    | 1x49x1x72 | Multiplier:1 padding:Same stride:2x2 dilation:1x1 activation:Relu |
+| 3           | conv_2d           | 170.5k | 84.7k  | 48.8k        | 1x49x1x72,24x1x1x72,24   | 1x49x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 4           | conv_2d           | 60.0k  | 28.2k  | 20.0k        | 1x98x1x24,24x1x1x24,24   | 1x49x1x24 | Padding:Same stride:2x2 activation:Relu                           |
+| 5           | add               | 1.2k   | 0      | 2.9k         | 1x49x1x24,1x49x1x24      | 1x49x1x24 | Activation:Relu                                                   |
+| 6           | conv_2d           | 179.9k | 84.7k  | 57.1k        | 1x49x1x24,72x1x1x24,72   | 1x49x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 7           | depthwise_conv_2d | 74.1k  | 31.8k  | 50.8k        | 1x49x1x72,1x9x1x72,72    | 1x49x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 8           | conv_2d           | 170.5k | 84.7k  | 48.8k        | 1x49x1x72,24x1x1x72,24   | 1x49x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 9           | add               | 1.2k   | 0      | 2.9k         | 1x49x1x24,1x49x1x24      | 1x49x1x24 | Activation:Relu                                                   |
+| 10          | conv_2d           | 179.9k | 84.7k  | 57.1k        | 1x49x1x24,72x1x1x24,72   | 1x49x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 11          | depthwise_conv_2d | 74.1k  | 31.8k  | 50.8k        | 1x49x1x72,1x9x1x72,72    | 1x49x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 12          | conv_2d           | 170.5k | 84.7k  | 48.8k        | 1x49x1x72,24x1x1x72,24   | 1x49x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 13          | add               | 1.2k   | 0      | 2.9k         | 1x49x1x24,1x49x1x24      | 1x49x1x24 | Activation:Relu                                                   |
+| 14          | conv_2d           | 179.9k | 84.7k  | 57.1k        | 1x49x1x24,72x1x1x24,72   | 1x49x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 15          | depthwise_conv_2d | 74.1k  | 31.8k  | 50.8k        | 1x49x1x72,1x9x1x72,72    | 1x49x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 16          | conv_2d           | 170.5k | 84.7k  | 48.8k        | 1x49x1x72,24x1x1x72,24   | 1x49x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 17          | add               | 1.2k   | 0      | 2.9k         | 1x49x1x24,1x49x1x24      | 1x49x1x24 | Activation:Relu                                                   |
+| 18          | conv_2d           | 179.9k | 84.7k  | 57.1k        | 1x49x1x24,72x1x1x24,72   | 1x49x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 19          | depthwise_conv_2d | 37.8k  | 16.2k  | 25.7k        | 1x49x1x72,1x9x1x72,72    | 1x25x1x72 | Multiplier:1 padding:Same stride:2x2 dilation:1x1 activation:Relu |
+| 20          | conv_2d           | 87.0k  | 43.2k  | 24.9k        | 1x25x1x72,24x1x1x72,24   | 1x25x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 21          | conv_2d           | 30.6k  | 14.4k  | 10.2k        | 1x49x1x24,24x1x1x24,24   | 1x25x1x24 | Padding:Same stride:2x2 activation:Relu                           |
+| 22          | add               | 600.0  | 0      | 1.5k         | 1x25x1x24,1x25x1x24      | 1x25x1x24 | Activation:Relu                                                   |
+| 23          | conv_2d           | 91.8k  | 43.2k  | 29.2k        | 1x25x1x24,72x1x1x24,72   | 1x25x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 24          | depthwise_conv_2d | 37.8k  | 16.2k  | 24.8k        | 1x25x1x72,1x9x1x72,72    | 1x25x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 25          | conv_2d           | 87.0k  | 43.2k  | 24.9k        | 1x25x1x72,24x1x1x72,24   | 1x25x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 26          | add               | 600.0  | 0      | 1.5k         | 1x25x1x24,1x25x1x24      | 1x25x1x24 | Activation:Relu                                                   |
+| 27          | conv_2d           | 91.8k  | 43.2k  | 29.2k        | 1x25x1x24,72x1x1x24,72   | 1x25x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 28          | depthwise_conv_2d | 37.8k  | 16.2k  | 24.8k        | 1x25x1x72,1x9x1x72,72    | 1x25x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 29          | conv_2d           | 87.0k  | 43.2k  | 24.9k        | 1x25x1x72,24x1x1x72,24   | 1x25x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 30          | add               | 600.0  | 0      | 1.5k         | 1x25x1x24,1x25x1x24      | 1x25x1x24 | Activation:Relu                                                   |
+| 31          | conv_2d           | 91.8k  | 43.2k  | 29.2k        | 1x25x1x24,72x1x1x24,72   | 1x25x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 32          | depthwise_conv_2d | 37.8k  | 16.2k  | 24.8k        | 1x25x1x72,1x9x1x72,72    | 1x25x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 33          | conv_2d           | 87.0k  | 43.2k  | 24.9k        | 1x25x1x72,24x1x1x72,24   | 1x25x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 34          | add               | 600.0  | 0      | 1.5k         | 1x25x1x24,1x25x1x24      | 1x25x1x24 | Activation:Relu                                                   |
+| 35          | conv_2d           | 91.8k  | 43.2k  | 29.2k        | 1x25x1x24,72x1x1x24,72   | 1x25x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 36          | depthwise_conv_2d | 19.7k  | 8.4k   | 12.7k        | 1x25x1x72,1x9x1x72,72    | 1x13x1x72 | Multiplier:1 padding:Same stride:2x2 dilation:1x1 activation:Relu |
+| 37          | conv_2d           | 45.2k  | 22.5k  | 13.0k        | 1x13x1x72,24x1x1x72,24   | 1x13x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 38          | conv_2d           | 15.9k  | 7.5k   | 5.3k         | 1x25x1x24,24x1x1x24,24   | 1x13x1x24 | Padding:Same stride:2x2 activation:Relu                           |
+| 39          | add               | 312.0  | 0      | 780.0        | 1x13x1x24,1x13x1x24      | 1x13x1x24 | Activation:Relu                                                   |
+| 40          | conv_2d           | 47.7k  | 22.5k  | 15.2k        | 1x13x1x24,72x1x1x24,72   | 1x13x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 41          | depthwise_conv_2d | 19.7k  | 8.4k   | 11.9k        | 1x13x1x72,1x9x1x72,72    | 1x13x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 42          | conv_2d           | 45.2k  | 22.5k  | 13.0k        | 1x13x1x72,24x1x1x72,24   | 1x13x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 43          | add               | 312.0  | 0      | 780.0        | 1x13x1x24,1x13x1x24      | 1x13x1x24 | Activation:Relu                                                   |
+| 44          | conv_2d           | 47.7k  | 22.5k  | 15.2k        | 1x13x1x24,72x1x1x24,72   | 1x13x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 45          | depthwise_conv_2d | 19.7k  | 8.4k   | 11.9k        | 1x13x1x72,1x9x1x72,72    | 1x13x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 46          | conv_2d           | 45.2k  | 22.5k  | 13.0k        | 1x13x1x72,24x1x1x72,24   | 1x13x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 47          | add               | 312.0  | 0      | 780.0        | 1x13x1x24,1x13x1x24      | 1x13x1x24 | Activation:Relu                                                   |
+| 48          | conv_2d           | 47.7k  | 22.5k  | 15.2k        | 1x13x1x24,72x1x1x24,72   | 1x13x1x72 | Padding:Valid stride:1x1 activation:Relu                          |
+| 49          | depthwise_conv_2d | 19.7k  | 8.4k   | 11.9k        | 1x13x1x72,1x9x1x72,72    | 1x13x1x72 | Multiplier:1 padding:Same stride:1x1 dilation:1x1 activation:Relu |
+| 50          | conv_2d           | 45.2k  | 22.5k  | 13.0k        | 1x13x1x72,24x1x1x72,24   | 1x13x1x24 | Padding:Valid stride:1x1 activation:None                          |
+| 51          | add               | 312.0  | 0      | 780.0        | 1x13x1x24,1x13x1x24      | 1x13x1x24 | Activation:Relu                                                   |
+| 52          | average_pool_2d   | 336.0  | 0      | 192.0        | 1x13x1x24                | 1x1x1x24  | Padding:Valid stride:1x13 filter:1x13 activation:None             |
+| 53          | reshape           | 0      | 0      | 0            | 1x1x1x24,2               | 1x24      | Type=reshapeoptions                                               |
+| 54          | fully_connected   | 441.0  | 216.0  | 360.0        | 1x24,9x24,9              | 1x9       | Activation:None                                                   |
+| 55          | softmax           | 45.0   | 0      | 0            | 1x9                      | 1x9       | Beta:1.0                                                          |
+'-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------'

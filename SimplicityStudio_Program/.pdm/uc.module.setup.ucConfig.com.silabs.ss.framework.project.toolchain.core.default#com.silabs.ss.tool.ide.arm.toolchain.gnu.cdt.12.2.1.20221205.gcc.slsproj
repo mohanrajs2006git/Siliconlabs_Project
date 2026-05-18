@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="uc.module.setup.ucConfig.com.silabs.ss.framework.project.toolchain.core.default#com.silabs.ss.tool.ide.arm.toolchain.gnu.cdt:12.2.1.20221205.gcc" propertyScope="project">
+  <folder name="config">
+    <folder name="tflite">
+      <file name="keyword_spotting_on_off_v3.tflite" generated="true" linked="false"/>
+    </folder>
+    <file name="sl_ml_audio_feature_generation_config_si91x.h" generated="true" linked="false"/>
+    <file name="sl_si91x_i2s_init_i2s0_config.h" generated="true" linked="false"/>
+    <file name="sl_si91x_rgb_led_config.h" generated="true" linked="false"/>
+    <file name="sl_si91x_rgb_led_init_led0_config.h" generated="true" linked="false"/>
+    <file name="sl_si91x_sleep_timer_clock_sel.h" generated="true" linked="false"/>
+    <file name="sl_si91x_ulp_uart_config.h" generated="true" linked="false"/>
+    <file name="sl_si91x_ulp_uart_common_config.h" generated="true" linked="false"/>
+    <file name="FreeRTOSConfig.h" generated="true" linked="false"/>
+    <file name="sl_si91x_i2s_config.h" generated="true" linked="false"/>
+    <file name="sl_si91x_dma_config.h" generated="true" linked="false"/>
+    <file name="RTE_Device_917.h" generated="true" linked="false"/>
+    <file name="sl_board_configuration.h" generated="true" linked="false"/>
+    <file name="sl_board_control.h" generated="true" linked="false"/>
+    <file name="pin_config.h" generated="true" linked="false"/>
+    <file name="sl_gpio_board.h" generated="true" linked="false"/>
+    <file name="sl_core_config.h" generated="true" linked="false"/>
+    <file name="sl_sleeptimer_config.h" generated="true" linked="false"/>
+    <file name="sl_si91x_stack_size_config.h" generated="true" linked="false"/>
+  </folder>
+  <includePath uri="studio:/project/config"/>
+  <includePath uri="studio:/project/config/tflite"/>
+</project>

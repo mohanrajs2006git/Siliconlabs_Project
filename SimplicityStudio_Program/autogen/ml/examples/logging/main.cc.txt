@@ -1,0 +1,128 @@
+/**
+ * This demonstrates how to execute a compiled .tflite model
+ * with the logging feature enabled.
+ *
+ * Refer to the corresponding README for more details.
+ */
+
+// Include the SDK headers
+#include "sl_system_init.h"
+
+// This is an optional header
+// that demonstrates how to manually configure the system clocks
+#include "ml/platform/ml_clock_helper.h"
+
+// Include your compiled model
+// Change "my_model_generated" to your model's name (if necessary)
+#include "keyword_spotting_generated.h"
+
+// To keep things simple,
+// we globally use the "npu_toolkit" C++ namespace.
+// This way, we do not have to manually use it
+// for every call.
+using namespace npu_toolkit;
+
+
+
+/**
+ * The following is optional!
+  This allows for executing a callback
+  BEFORE and AFTER each layer of the model during
+  the various stages of the models's cycle:
+  Init, Prepare, Invoke
+ */
+static TfLiteStatus layer_callback(
+  TfliteMicroSection section,
+  bool is_start,
+  int index,
+  const tflite::NodeAndRegistration& node_and_registration,
+  TfLiteStatus status,
+  void* arg
+)
+{
+  auto& logger = *reinterpret_cast<logging::Logger*>(arg);
+
+  // This is called when the model is running inference for the layer.
+  // is_start = true -> Callback before the layer is executed.
+  // is_start = false -> Callback after the layer is executed.
+  if(is_start && section == TfliteMicroSection::Invoke)
+  {
+    logger.info("Executing layer index=%d", index);
+  }
+
+  // If this returns something other than kTfLiteSuccess,
+  // then that will abort the rest of the processing for the model
+  return status;
+}
+
+
+
+int main()
+{
+  // Initialize the system
+  sl_system_init();
+
+  // This is optional,
+  // but may be used to configure the platform's max clock rate
+  ml_configure_clocks_to_max_rate();
+
+  // Define a TfliteMicroModel instance
+  // This allows for executing the compiled model.
+  // NOTE: This effectively wraps the Tensorflow-Lite Micro Interpreter.
+  TfliteMicroModel model;
+
+  // Obtain a reference to the logger used by the TfliteMicroModel lib
+  auto& logger = get_logger();
+
+  // Set the logging level to "debug"
+  logger.level(logging::Debug);
+
+  logger.info("Logging example starting ...");
+
+  // Set a callback to be invoked for each layer of the model
+  // As an example, we give a pointer to the logger.
+  // This allows the callback to access the logger.
+  model.set_layer_callback(layer_callback, &logger);
+
+
+  // Load the compiled .tflite model
+  // with the given TfliteMicroModel instance
+  logger.info("Loading model");
+  if(!load_tflite_micro_model(model)) {
+    logger.error("Failed to load model");
+    for(;;);
+  }
+  auto acc = model.accelerator();
+  logger.info("Using accelerator: %s, %s", acc->name(), acc->description());
+
+  // Populate the model input tensor
+  // Typically, this is when you would write
+  // your sensor data (e.g. image, audio, accelerometer, etc.)
+  // For this example, we just set them to 0
+  for(unsigned i = 0; i < model.n_inputs(); ++i)
+  {
+    auto& input_tensor = *model.input(i);
+    memset(input_tensor.data.raw, 0, input_tensor.bytes);
+  }
+
+  // Invoke the model
+  // This will cause the ML model to execute on the accelerator
+  // The model's output tensors will contain the results
+  if(!model.invoke()) {
+    logger.error("Failed to invoke model");
+    for(;;);
+  }
+
+  // For this example, we just print a summary of the output tensor(s)
+  logger.info("Output tensor(s):");
+  for(unsigned i = 0; i < model.n_outputs(); ++i)
+  {
+    auto& output_tensor = *model.output(i);
+    logger.info("  [%d] %s\n", i, output_tensor.to_str());
+  }
+
+
+  logger.info("Done");
+
+  return 0;
+}

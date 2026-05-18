@@ -1,0 +1,86 @@
+/**
+ * This demonstrates the bare-minimum required
+ * to execute a compiled .tflite model.
+ *
+ * Refer to the corresponding README for more details.
+ */
+
+#include <cstdio>
+
+// Include the SDK headers
+#include "sl_system_init.h"
+
+// This is an optional header
+// that demonstrates how to manually configure the system clocks
+#include "ml/platform/ml_clock_helper.h"
+
+// Include your compiled model
+// Change "my_model_generated" to your model's name (if necessary)
+#include "keyword_spotting_generated.h"
+
+// To keep things simple,
+// we globally use the "npu_toolkit" C++ namespace.
+// This way, we do not have to manually use it
+// for every call.
+using namespace npu_toolkit;
+
+
+
+int main()
+{
+  // Initialize the system
+  sl_system_init();
+
+  // This is optional,
+  // but may be used to configure the platform's max clock rate
+  ml_configure_clocks_to_max_rate();
+
+  // Define a TfliteMicroModel instance
+  // This allows for executing the compiled model.
+  // NOTE: This effectively wraps the Tensorflow-Lite Micro Interpreter.
+  TfliteMicroModel model;
+
+  printf("Basic example starting ...\n");
+
+  // Load the compiled .tflite model
+  // with the given TfliteMicroModel instance
+  printf("Loading model\n");
+  if(!load_tflite_micro_model(model)) {
+    printf("Failed to load model\n");
+    for(;;);
+  }
+  auto acc = model.accelerator();
+  printf("Using accelerator: %s, %s\n", acc->name(), acc->description());
+
+  // Populate the model input tensor
+  // Typically, this is when you would write
+  // your sensor data (e.g. image, audio, accelerometer, etc.)
+  // For this example, we just set them to 0
+  for(unsigned i = 0; i < model.n_inputs(); ++i)
+  {
+    auto& input_tensor = *model.input(i);
+    memset(input_tensor.data.raw, 0, input_tensor.bytes);
+  }
+
+
+  // Invoke the model
+  // This will cause the ML model to execute on the accelerator
+  // The model's output tensors will contain the results
+  if(!model.invoke()) {
+    printf("Failed to invoke model\n");
+    for(;;);
+  }
+
+  // For this example, we just print a summary of the output tensor(s)
+  printf("Output tensor(s):\n");
+  for(unsigned i = 0; i < model.n_outputs(); ++i)
+  {
+    auto& output_tensor = *model.output(i);
+    printf("  [%d] %s\n", i, output_tensor.to_str());
+  }
+
+
+  printf("Done\n");
+
+  return 0;
+}
